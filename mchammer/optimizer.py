@@ -142,8 +142,6 @@ class Optimizer:
         else:
             random.seed(random_seed)
 
-
-
     def _get_inter_bb_distance(self, mol):
         """
         Yield The distances between building blocks in mol.
@@ -261,7 +259,6 @@ class Optimizer:
         return bb_cent_vectors, bb_cent_scales
 
     def _get_bb_atom_ids(self, mol):
-
         bb_atom_ids = defaultdict(list)
         for i in mol.get_atom_infos():
             bb_atom_ids[i.get_building_block_id()].append(
@@ -270,38 +267,10 @@ class Optimizer:
 
         return bb_atom_ids
 
-    def _get_bond_length(self, mol, bond):
-
-        position_matrix = mol.get_position_matrix()
-        return get_atom_distance(
-            position_matrix=position_matrix,
-            atom1_id=bond.get_atom1().get_id(),
-            atom2_id=bond.get_atom2().get_id()
-        )
-
-    def _get_bond_vector(self, mol, bond):
-
-        position_matrix = mol.get_position_matrix()
-        atom1_pos = position_matrix[bond.get_atom1().get_id()]
-        atom2_pos = position_matrix[bond.get_atom2().get_id()]
+    def _get_bond_vector(self, position_matrix, bond_ids):
+        atom1_pos = position_matrix[bond_ids[0]]
+        atom2_pos = position_matrix[bond_ids[1]]
         return atom2_pos - atom1_pos
-
-    def _get_long_bond_infos(self, mol):
-        """
-        Returns dict of long bond infos.
-
-        """
-
-        long_bond_infos = {}
-        for bond_infos in mol.get_bond_infos():
-            if bond_infos.get_building_block() is None:
-                ids = (
-                    bond_infos.get_bond().get_atom1().get_id(),
-                    bond_infos.get_bond().get_atom2().get_id(),
-                )
-                long_bond_infos[ids] = bond_infos
-
-        return long_bond_infos
 
     def _get_bb_centroids(self, mol, bb_atom_ids):
         """
@@ -378,16 +347,16 @@ class Optimizer:
 
         return sum(non_bonded_potential)
 
-    def _compute_potential(self, mol, long_bond_infos):
+    def _compute_potential(self, mol, bonds):
 
         system_potential = self._compute_non_bonded_potential(mol)
-        for long_bond_ids in long_bond_infos:
-            long_bond = long_bond_infos[long_bond_ids]
-
+        position_matrix = mol.get_position_matrix()
+        for bond in bonds:
             system_potential += self._bond_potential(
-                distance=self._get_bond_length(
-                    mol=mol,
-                    bond=long_bond.get_bond()
+                distance=get_atom_distance(
+                    position_matrix=position_matrix,
+                    atom1_id=bond[0],
+                    atom2_id=bond[1],
                 )
             )
 
@@ -396,12 +365,14 @@ class Optimizer:
     def _translate_atoms_along_vector(self, mol, atom_ids, vector):
 
         new_position_matrix = mol.get_position_matrix()
-        for atom in mol.get_atom_infos(atom_ids=atom_ids):
-            _id = atom.get_atom().get_id()
-            pos = mol.get_position_matrix()[_id]
-            new_position_matrix[_id] = pos - vector
+        for atom in mol.get_atoms():
+            if atom.get_id() not in atom_ids:
+                continue
+            pos = mol.get_position_matrix()[atom.get_id()]
+            new_position_matrix[atom.get_id()] = pos - vector
 
-        return mol.with_position_matrix(new_position_matrix)
+        mol.update_position_matrix(new_position_matrix)
+        return mol
 
     def _rotate_atoms_onto_vector(
         self,
@@ -446,15 +417,19 @@ class Optimizer:
 
         return string
 
-    def _plot_progess(self, steps, maxds, spots, npots, output_dir):
+    def _plot_progess(self, system_properties, output_dir):
 
         fig, ax = plt.subplots(figsize=(8, 5))
-        ax.plot(steps, maxds, c='k', lw=2)
+        ax.plot(
+            system_properties['steps'],
+            system_properties['max_bond_distance'],
+            c='k', lw=2
+        )
         # Set number of ticks for x-axis
         ax.tick_params(axis='both', which='major', labelsize=16)
         ax.set_xlabel('step', fontsize=16)
         ax.set_ylabel('max long bond length [angstrom]', fontsize=16)
-        ax.axhline(y=self._target_bond_length, c='r')
+        ax.axhline(y=self._target_bond_length, c='r', linestyle='--')
         fig.tight_layout()
         fig.savefig(
             os.path.join(output_dir, f'maxd_vs_step.pdf'),
@@ -464,8 +439,16 @@ class Optimizer:
         plt.close()
         # Plot energy vs timestep.
         fig, ax = plt.subplots(figsize=(8, 5))
-        ax.plot(steps, spots, c='k', lw=2, label='total')
-        ax.plot(steps, npots, c='r', lw=2, label='non bonded')
+        ax.plot(
+            system_properties['steps'],
+            system_properties['total_potential'],
+            c='k', lw=2, label='system potential'
+        )
+        ax.plot(
+            system_properties['steps'],
+            system_properties['nbond_potential'],
+            c='r', lw=2, label='nonbonded potential'
+        )
         # Set number of ticks for x-axis
         ax.tick_params(axis='both', which='major', labelsize=16)
         ax.set_xlabel('step', fontsize=16)
@@ -479,7 +462,6 @@ class Optimizer:
         )
         plt.close()
 
-    def optimize(self, mol):
     def _get_subunits(self, mol, bonds):
         """
         Get connected graphs based on mol separated by bonds.
@@ -505,6 +487,194 @@ class Optimizer:
         }
 
         return subunits
+
+    def _run_optimization(self, mol, bonds, output_dir, f):
+
+        f.write(self._output_top_lines())
+        f.write(f'There are {len(bonds)} long bonds.\n')
+        # Find rigid subunits based on bonds to optimize.
+        print(bonds)
+        subunits = self._get_subunits(mol, bonds)
+        subunit_centroids = {
+            i: mol.get_centroid(atom_ids=subunits[i])
+            for i in subunits
+        }
+        print(subunit_centroids)
+
+        f.write(
+            f'There are {len(subunits)} sub units of sizes: '
+            f'{[len(subunits[i]) for i in subunits]}\n'
+        )
+
+        # Define neighbour lists here and implement this in the below
+        # method.
+
+        system_potential = self._compute_potential(
+            mol=mol, bonds=bonds,
+        )
+
+        # Define bb centroid - long bond atom vectors.
+        # These are to be maintained during optimisation.
+        # centroid_to_lb_vectors = self._get_cent_to_lb_vector(
+        #     mol, bb_centroids, long_bond_infos
+        # )
+        f.write('################################################\n')
+        f.write('WARNING: centroid_to_lb_vectors not maintained.\n')
+        f.write('################################################\n')
+
+        # Write structures at each step to file.
+        mol.write_xyz_file(os.path.join(output_dir, f'coll_0.xyz'))
+
+        # Update properties at each step.
+        system_properties = {
+            'steps': [0],
+            'passed': [],
+            'total_potential': [system_potential],
+            'nbond_potential': [
+                self._compute_non_bonded_potential(mol=mol)
+            ],
+            'max_bond_distance': [max([
+                get_atom_distance(
+                    position_matrix=mol.get_position_matrix(),
+                    atom1_id=bond[0],
+                    atom2_id=bond[1],
+                )
+                for bond in bonds
+            ])],
+        }
+        f.write(
+            'step system_potential nonbond_potential max_dist '
+            'opt_bbs updated?\n'
+        )
+        f.write(
+            f"{system_properties['steps'][-1]} "
+            f"{system_properties['total_potential'][-1]} "
+            f"{system_properties['nbond_potential'][-1]} "
+            f"{system_properties['max_bond_distance'][-1]} "
+            '-- --\n'
+        )
+
+        for step in range(1, self._num_steps):
+            position_matrix = mol.get_position_matrix()
+
+            # Randomly select a bond to optimize from bonds.
+            bond_ids = random.choice(bonds)
+            bond_vector = self._get_bond_vector(
+                position_matrix=position_matrix,
+                bond_ids=bond_ids
+            )
+
+            # Get subunits connected by selected bonds.
+            subunit_1 = [
+                i for i in subunits if bond_ids[0] in subunits[i]
+            ][0]
+            subunit_2 = [
+                i for i in subunits if bond_ids[1] in subunits[i]
+            ][0]
+
+            # Choose subunit to move out of the two connected by the
+            # bond randomly.
+            moving_bb = random.choice([subunit_1, subunit_2])
+            moving_bb_atom_ids = tuple(i for i in subunits[moving_bb])
+
+            # Random number from -1 to 1 for multiplying translation.
+            rand = (random.random() - 0.5) * 2
+            # Define translation along long bond vector where
+            # direction is from force, magnitude is randomly
+            # scaled.
+            bond_translation = -bond_vector * self._step_size * rand
+
+            # Define subunit COM vector to molecule COM.
+            cent = mol.get_centroid()
+            su_cent_vector = (
+                mol.get_centroid(atom_ids=moving_bb_atom_ids)-cent
+            )
+            com_translation = su_cent_vector * self._step_size * rand
+
+            # Randomly choose between translation along long bond
+            # vector or along BB-COM vector.
+            translation_vector = random.choice([
+                bond_translation,
+                com_translation,
+            ])
+
+            # Translate building block.
+            # Update atom position of building block.
+            mol = self._translate_atoms_along_vector(
+                mol=mol,
+                atom_ids=moving_bb_atom_ids,
+                vector=translation_vector,
+            )
+
+            ###################################################
+            # Here I want to add rotations
+            # To maintain cent_vectors relative orientations.
+            # cent_vector_1 = centroid_to_lb_vectors[
+            #     (bb_id_1, lb_ids[0])
+            # ]
+            # cent_vector_2 = centroid_to_lb_vectors[
+            #     (bb_id_2, lb_ids[1])
+            # ]
+            ###################################################
+
+            new_system_potential = self._compute_potential(
+                mol=mol, bonds=bonds,
+            )
+            print(subunit_1, subunit_2, new_system_potential)
+
+            if self._test_move(system_potential, new_system_potential):
+                updated = 'T'
+                system_potential = new_system_potential
+                system_properties['passed'].append(step)
+            else:
+                updated = 'F'
+                # Reverse move.
+                mol = self._translate_atoms_along_vector(
+                    mol=mol,
+                    atom_ids=moving_bb_atom_ids,
+                    vector=-translation_vector,
+                )
+
+            # Write structures at each step to file.
+            mol.write_xyz_file(
+                os.path.join(output_dir, f'coll_{step}.xyz')
+            )
+
+            # Update properties at each step.
+            system_properties['steps'].append(step)
+            system_properties['total_potential'].append(
+                system_potential
+            )
+            system_properties['nbond_potential'].append(
+                self._compute_non_bonded_potential(mol=mol)
+            )
+            system_properties['max_bond_distance'].append(max([
+                get_atom_distance(
+                    position_matrix=mol.get_position_matrix(),
+                    atom1_id=bond[0],
+                    atom2_id=bond[1],
+                )
+                for bond in bonds
+            ]))
+            f.write(
+                f"{system_properties['steps'][-1]} "
+                f"{system_properties['total_potential'][-1]} "
+                f"{system_properties['nbond_potential'][-1]} "
+                f"{system_properties['max_bond_distance'][-1]} "
+                f'{bond_ids} {updated}\n'
+            )
+            step += 1
+
+        f.write('\n============================================\n')
+        f.write(
+            'Optimisation done:\n'
+            f"{len(system_properties['passed'])} steps passed: "
+            f"{len(system_properties['passed'])/self._num_steps}"
+        )
+
+        self._plot_progess(system_properties, output_dir)
+
+        return mol
 
     def optimize(self, mol, bonds):
         """
@@ -536,172 +706,7 @@ class Optimizer:
             shutil.rmtree(output_dir)
         os.mkdir(output_dir)
 
-        # Find rigid subunits based on bonds to optimize.
-        print(bonds)
-        subunits = self._get_subunits(mol, bonds)
-        print(subunits)
-
-        import sys
-        sys.exit()
-
-        # If no long bonds, then optimisation is done.
-        if len(long_bond_infos) == 0:
-            return mol
-
-        # Get bb atom ids and bb centroids.
-        bb_atom_ids = self._get_bb_atom_ids(mol)
-        bb_centroids = self._get_bb_centroids(mol, bb_atom_ids)
-
-        # Define bb centroid - long bond atom vectors.
-        # These are to be maintained during optimisation.
-        # centroid_to_lb_vectors = self._get_cent_to_lb_vector(
-        #     mol, bb_centroids, long_bond_infos
-        # )
-        print('###################################################')
-        print('WARNING: centroid_to_lb_vectors not maintained yet.')
-        print('###################################################')
-
-        system_potential = self._compute_potential(
-            mol=mol,
-            long_bond_infos=long_bond_infos
-        )
-
         with open(os.path.join(output_dir, f'coll.out'), 'w') as f:
-            f.write(self._output_top_lines())
-            mol.write(os.path.join(output_dir, f'coll_0.mol'))
-            steps = [0]
-            passed = []
-            spots = [system_potential]
-            npots = [self._compute_non_bonded_potential(mol=mol)]
-            maxds = [max([
-                self._get_bond_length(
-                    mol, long_bond_infos[i].get_bond()
-                )
-                for i in long_bond_infos
-            ])]
-            f.write(
-                'Step system_potential nonbond_potential max_dist '
-                'opt_bbs updated?\n'
-            )
-            f.write(
-                f'{steps[-1]} {spots[-1]} {npots[-1]} {maxds[-1]} '
-                '-- --\n'
-            )
-            for step in range(1, self._num_steps):
-
-                # Randomly select a long bond.
-                lb_ids = random.choice(list(long_bond_infos.keys()))
-                lb_info = long_bond_infos[lb_ids]
-
-                lb_vector = self._get_bond_vector(
-                    mol=mol,
-                    bond=lb_info.get_bond()
-                )
-
-                bb_id_1, bb_id_2 = (
-                    i.get_building_block_id()
-                    for i in mol.get_atom_infos(atom_ids=lb_ids)
-                )
-
-                # Choose bb to move out of the two randomly.
-                moving_bb = random.choice([bb_id_1, bb_id_2])
-                moving_bb_atom_ids = tuple(
-                    i.get_atom().get_id()
-                    for i in mol.get_atom_infos()
-                    if i.get_building_block_id() == moving_bb
-                )
-
-                # Randomly choose between translation along long bond
-                # vector or along BB-COM vector.
-                # Random number from -1 to 1
-                rand = (random.random() - 0.5) * 2
-
-                # Define translation along long bond vector where
-                # direction is from force, magnitude is randomly
-                # scaled.
-                long_bond_translation = (
-                    -lb_vector * self._step_size * rand
-                )
-
-                # Get bb COM vector to molecule COM.
-                cent = mol.get_centroid()
-                bb_cent_vector = (
-                    mol.get_centroid(atom_ids=moving_bb_atom_ids)-cent
-                )
-                com_translation = (
-                    bb_cent_vector * self._step_size * rand
-                )
-
-                translation_vector = random.choice([
-                    long_bond_translation,
-                    com_translation,
-                ])
-
-                # Translate building block.
-                # Update atom position of building block.
-                mol = self._translate_atoms_along_vector(
-                    mol=mol,
-                    atom_ids=moving_bb_atom_ids,
-                    vector=translation_vector,
-                )
-
-                ###################################################
-                # Here I want to add rotations
-                # To maintain cent_vectors relative orientations.
-                # cent_vector_1 = centroid_to_lb_vectors[
-                #     (bb_id_1, lb_ids[0])
-                # ]
-                # cent_vector_2 = centroid_to_lb_vectors[
-                #     (bb_id_2, lb_ids[1])
-                # ]
-                ###################################################
-
-                new_system_potential = self._compute_potential(
-                    mol=mol,
-                    long_bond_infos=long_bond_infos
-                )
-
-                if self._test_move(
-                    system_potential,
-                    new_system_potential
-                ):
-                    updated = 'T'
-                    system_potential = new_system_potential
-                    passed.append(step)
-                else:
-                    updated = 'F'
-                    # Reverse move.
-                    mol = self._translate_atoms_along_vector(
-                        mol=mol,
-                        atom_ids=moving_bb_atom_ids,
-                        vector=-translation_vector,
-                    )
-
-                mol.write(os.path.join(output_dir, f'coll_{step}.xyz'))
-                steps.append(step)
-                spots.append(system_potential)
-                npots.append(
-                    self._compute_non_bonded_potential(mol=mol)
-                )
-                maxds.append(max([
-                    self._get_bond_length(
-                        mol, long_bond_infos[i].get_bond()
-                    )
-                    for i in long_bond_infos
-                ]))
-                f.write(
-                    f'{steps[-1]} {spots[-1]} '
-                    f'{npots[-1]} {maxds[-1]} {lb_ids} {updated}\n'
-                )
-                step += 1
-
-            f.write('\n============================================\n')
-            f.write(
-                'Optimisation done:\n'
-                f'{len(passed)} steps passed: '
-                f'{len(passed)/self._num_steps}'
-            )
-
-        self._plot_progess(steps, maxds, spots, npots, output_dir)
+            mol = self._run_optimization(mol, bonds, output_dir, f)
 
         return mol
