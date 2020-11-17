@@ -18,7 +18,11 @@ import uuid
 import os
 import shutil
 
-from .utilities import get_atom_distance
+from .utilities import (
+    get_atom_distance,
+    rotation_matrix_arbitrary_axis,
+    normalize_vector,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -65,6 +69,7 @@ class Optimizer:
         self,
         output_dir,
         step_size,
+        rotation_step_size,
         target_bond_length,
         num_steps,
         bond_epsilon=50,
@@ -86,6 +91,9 @@ class Optimizer:
 
         step_size : :class:`float`
             The relative size of the step to take during step.
+
+        rotation_step_size : :class:`float`
+            Maximum rotation step to take in radians.
 
         target_bond_length : :class:`float`
             Target equilibrium bond length for long bonds to minimize
@@ -128,6 +136,7 @@ class Optimizer:
 
         self._output_dir = output_dir
         self._step_size = step_size
+        self._rotation_step_size = rotation_step_size
         self._target_bond_length = target_bond_length
         self._num_steps = num_steps
         self._bond_epsilon = bond_epsilon
@@ -234,15 +243,35 @@ class Optimizer:
         mol.update_position_matrix(new_position_matrix)
         return mol
 
-    def _rotate_atoms_onto_vector(
+    def _rotate_atoms_by_angle(
         self,
         mol,
         atom_ids,
-        start_vector,
-        target_vector,
-        axis
+        angle,
+        axis,
+        origin
     ):
-        raise NotImplementedError()
+        ori_position_matrix = mol.get_position_matrix()
+        new_position_matrix = mol.get_position_matrix()
+        # Set the origin of the rotation to "origin".
+        new_position_matrix = new_position_matrix - origin
+        # Perform rotation.
+        rot_mat = rotation_matrix_arbitrary_axis(angle, axis)
+        # Apply the rotation matrix on the position matrix, to get the
+        # new position matrix.
+        new_position_matrix = (rot_mat @ new_position_matrix.T).T
+        # Return the centroid of the molecule to the original position.
+        new_position_matrix = new_position_matrix + origin
+
+        # Reinstate NOT atom_ids with original position matrix.
+        for atom in mol.get_atoms():
+            if atom.get_id() not in atom_ids:
+                new_position_matrix[atom.get_id()] = (
+                    ori_position_matrix[atom.get_id()]
+                )
+
+        mol.update_position_matrix(new_position_matrix)
+        return mol
 
     def _test_move(self, curr_pot, new_pot):
 
@@ -265,6 +294,7 @@ class Optimizer:
             '                ----------------------              \n'
             '                                                    \n'
             f' step size = {self._step_size} \n'
+            f' rotation step size = {self._rotation_step_size} \n'
             f' target bond length = {self._target_bond_length} \n'
             f' num. steps = {self._num_steps} \n'
             f' bond epsilon = {self._bond_epsilon} \n'
@@ -355,11 +385,6 @@ class Optimizer:
         # Find rigid subunits based on bonds to optimize.
         print(bonds)
         subunits = self._get_subunits(mol, bonds)
-        subunit_centroids = {
-            i: mol.get_centroid(atom_ids=subunits[i])
-            for i in subunits
-        }
-        print(subunit_centroids)
 
         f.write(
             f'There are {len(subunits)} sub units of sizes: '
@@ -372,15 +397,6 @@ class Optimizer:
         system_potential = self._compute_potential(
             mol=mol, bonds=bonds,
         )
-
-        # Define bb centroid - long bond atom vectors.
-        # These are to be maintained during optimisation.
-        # centroid_to_lb_vectors = self._get_cent_to_lb_vector(
-        #     mol, bb_centroids, long_bond_infos
-        # )
-        f.write('################################################\n')
-        f.write('WARNING: centroid_to_lb_vectors not maintained.\n')
-        f.write('################################################\n')
 
         # Write structures at each step to file.
         mol.write_xyz_file(os.path.join(output_dir, f'coll_0.xyz'))
@@ -434,8 +450,8 @@ class Optimizer:
 
             # Choose subunit to move out of the two connected by the
             # bond randomly.
-            moving_bb = random.choice([subunit_1, subunit_2])
-            moving_bb_atom_ids = tuple(i for i in subunits[moving_bb])
+            moving_su = random.choice([subunit_1, subunit_2])
+            moving_su_atom_ids = tuple(i for i in subunits[moving_su])
 
             # Random number from -1 to 1 for multiplying translation.
             rand = (random.random() - 0.5) * 2
@@ -447,7 +463,7 @@ class Optimizer:
             # Define subunit COM vector to molecule COM.
             cent = mol.get_centroid()
             su_cent_vector = (
-                mol.get_centroid(atom_ids=moving_bb_atom_ids)-cent
+                mol.get_centroid(atom_ids=moving_su_atom_ids)-cent
             )
             com_translation = su_cent_vector * self._step_size * rand
 
@@ -462,25 +478,29 @@ class Optimizer:
             # Update atom position of building block.
             mol = self._translate_atoms_along_vector(
                 mol=mol,
-                atom_ids=moving_bb_atom_ids,
+                atom_ids=moving_su_atom_ids,
                 vector=translation_vector,
             )
 
-            ###################################################
-            # Here I want to add rotations
-            # To maintain cent_vectors relative orientations.
-            # cent_vector_1 = centroid_to_lb_vectors[
-            #     (bb_id_1, lb_ids[0])
-            # ]
-            # cent_vector_2 = centroid_to_lb_vectors[
-            #     (bb_id_2, lb_ids[1])
-            # ]
-            ###################################################
+            # Define a random rotation of a random subunit out of the
+            # two options.
+            # Random number from -1 to 1 for multiplying rotation.
+            rand = (random.random() - 0.5) * 2
+            rotation_angle = self._rotation_step_size * rand
+            rotation_axis = normalize_vector(np.array(su_cent_vector))
 
+            # Rotate the subunit.
+            mol = self._rotate_atoms_by_angle(
+                mol=mol,
+                atom_ids=moving_su_atom_ids,
+                angle=rotation_angle,
+                axis=rotation_axis,
+                origin=mol.get_centroid(atom_ids=moving_su_atom_ids),
+            )
             new_system_potential = self._compute_potential(
                 mol=mol, bonds=bonds,
             )
-            print(subunit_1, subunit_2, new_system_potential)
+            print(step, subunit_1, subunit_2, new_system_potential)
 
             if self._test_move(system_potential, new_system_potential):
                 updated = 'T'
@@ -491,7 +511,7 @@ class Optimizer:
                 # Reverse move.
                 mol = self._translate_atoms_along_vector(
                     mol=mol,
-                    atom_ids=moving_bb_atom_ids,
+                    atom_ids=moving_su_atom_ids,
                     vector=-translation_vector,
                 )
 
