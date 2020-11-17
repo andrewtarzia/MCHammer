@@ -78,6 +78,7 @@ class Optimizer:
         nonbond_mu=3,
         beta=2,
         random_seed=None,
+        use_neighbour_list=True,
     ):
         """
         Initialize a :class:`Collapser` instance.
@@ -132,6 +133,13 @@ class Optimizer:
             a system-based random seed should be used for proper
             sampling.
 
+        use_neighbour_list : :class:`bool`, optional
+            ``True`` to use neighbour list defined by immediately
+            connected sub units, which are defined by bonds to be
+            optimized. Neighbour lists will speed up the algorithm
+            but may lead to steric clashes in complex systems.
+            Defaults to ``True``.
+
         """
 
         self._output_dir = output_dir
@@ -148,6 +156,7 @@ class Optimizer:
             random.seed()
         else:
             random.seed(random_seed)
+        self._use_neighbour_list = use_neighbour_list
 
     def _get_bond_vector(self, position_matrix, bond_ids):
         atom1_pos = position_matrix[bond_ids[0]]
@@ -216,9 +225,12 @@ class Optimizer:
 
         return sum(non_bonded_potential)
 
-    def _compute_potential(self, mol, bonds):
+    def _compute_potential(self, mol, bonds, neighour_lists):
 
-        system_potential = self._compute_non_bonded_potential(mol)
+        system_potential = self._compute_non_bonded_potential(
+            mol,
+            neighour_lists
+        )
         position_matrix = mol.get_position_matrix()
         for bond in bonds:
             system_potential += self._bond_potential(
@@ -302,6 +314,7 @@ class Optimizer:
             f' nonbond sigma = {self._nonbond_sigma} \n'
             f' nonbond mu = {self._nonbond_mu} \n'
             f' beta = {self._beta} \n'
+            f' neighbour lists used? = {self._use_neighbour_list} \n'
             '====================================================\n\n'
         )
 
@@ -383,19 +396,44 @@ class Optimizer:
         f.write(self._output_top_lines())
         f.write(f'There are {len(bonds)} long bonds.\n')
         # Find rigid subunits based on bonds to optimize.
-        print(bonds)
         subunits = self._get_subunits(mol, bonds)
 
+        # Define neighbour list based on connected subunits.
+        if self._use_neighbour_list:
+            neighour_lists = {}
+            for su in subunits:
+                connected_subunits = []
+                for bond_ids in bonds:
+                    if bond_ids[0] in subunits[su]:
+                        connected_subunits.append(
+                            [
+                                i
+                                for i in subunits
+                                if bond_ids[1] in subunits[i]
+                            ][0]
+                        )
+                    elif bond_ids[1] in subunits[su]:
+                        connected_subunits.append(
+                            [
+                                i
+                                for i in subunits
+                                if bond_ids[0] in subunits[i]
+                            ][0]
+                        )
+                neighour_lists[su] = connected_subunits
+
+        else:
+            neighour_lists = None
         f.write(
             f'There are {len(subunits)} sub units of sizes: '
             f'{[len(subunits[i]) for i in subunits]}\n'
         )
 
-        # Define neighbour lists here and implement this in the below
-        # method.
+        if self._use_neighbour_list:
+            f.write(f'Neighbour lists: {neighour_lists}\n\n\n')
 
         system_potential = self._compute_potential(
-            mol=mol, bonds=bonds,
+            mol=mol, bonds=bonds, neighour_lists=neighour_lists,
         )
 
         # Write structures at each step to file.
@@ -407,7 +445,9 @@ class Optimizer:
             'passed': [],
             'total_potential': [system_potential],
             'nbond_potential': [
-                self._compute_non_bonded_potential(mol=mol)
+                self._compute_non_bonded_potential(
+                    mol=mol, neighour_lists=neighour_lists
+                )
             ],
             'max_bond_distance': [max([
                 get_atom_distance(
@@ -498,7 +538,7 @@ class Optimizer:
                 origin=mol.get_centroid(atom_ids=moving_su_atom_ids),
             )
             new_system_potential = self._compute_potential(
-                mol=mol, bonds=bonds,
+                mol=mol, bonds=bonds, neighour_lists=neighour_lists,
             )
             print(step, subunit_1, subunit_2, new_system_potential)
 
@@ -526,7 +566,9 @@ class Optimizer:
                 system_potential
             )
             system_properties['nbond_potential'].append(
-                self._compute_non_bonded_potential(mol=mol)
+                self._compute_non_bonded_potential(
+                    mol=mol, neighour_lists=neighour_lists
+                )
             )
             system_properties['max_bond_distance'].append(max([
                 get_atom_distance(
