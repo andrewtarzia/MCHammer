@@ -21,7 +21,7 @@ class Atom:
 
     """
 
-    def __init__(self, id):
+    def __init__(self, id, element_string):
         """
         Initialize a :class:`Atom` instance.
 
@@ -31,9 +31,13 @@ class Atom:
         """
 
         self._id = id
+        self._element_string = element_string
 
     def get_id(self):
         return self._id
+
+    def get_element_string(self):
+        return self._element_string
 
     def __str__(self):
         return repr(self)
