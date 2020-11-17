@@ -9,9 +9,7 @@ Optimizer for minimise intermolecular distances.
 """
 
 import logging
-from itertools import combinations
 import numpy as np
-from collections import defaultdict
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import pdist
 import random
@@ -142,148 +140,10 @@ class Optimizer:
         else:
             random.seed(random_seed)
 
-    def _get_inter_bb_distance(self, mol):
-        """
-        Yield The distances between building blocks in mol.
-
-        Ignores H atoms.
-
-        """
-
-        position_matrix = mol.get_position_matrix()
-
-        for atom1, atom2 in combinations(mol.get_atom_infos(), 2):
-            chk1 = (
-                atom1.get_atom().get_id() != atom2.get_atom().get_id()
-            )
-            chk2 = (
-                atom1.get_atom().get_atomic_number() != 1
-                and atom2.get_atom().get_atomic_number() != 1
-            )
-            chk3 = (
-                atom1.get_building_block_id() !=
-                atom2.get_building_block_id()
-            )
-            if chk1 and chk2 and chk3:
-                dist = get_atom_distance(
-                    position_matrix=position_matrix,
-                    atom1_id=atom1.get_atom().get_id(),
-                    atom2_id=atom2.get_atom().get_id()
-                )
-                yield dist
-
-    def _has_short_contacts(self, mol):
-        """
-        Calculate if there are short contants in mol.
-
-        """
-
-        return any(
-            dist < self._distance_cut
-            for dist in self._get_inter_bb_distance(mol)
-        )
-
-    def _get_new_position_matrix(self, mol, step, vectors, scales):
-        """
-        Get the position matrix of the mol after translation.
-
-        """
-
-        new_position_matrix = mol.get_position_matrix()
-        for atom in mol.get_atom_infos():
-            bb_id = atom.get_building_block_id()
-            _id = atom.get_atom().get_id()
-            pos = mol.get_position_matrix()[_id]
-            new_position_matrix[_id] = (
-                pos - step*vectors[bb_id]*scales[bb_id]
-            )
-
-        return new_position_matrix
-
-    def _get_bb_vectors(self, mol, bb_atom_ids):
-        """
-        Get the building block to COM vectors.
-
-        Parameters
-        ----------
-        mol : :class:`.Molecule`
-            The molecule to be optimized.
-
-        bb_atom_ids : :class:`dict` mapping :class:`int`: :class:`list`
-            Dictionary mapping building block ids (keys) to a list of
-            atom ids (values) in each distinct building block in the
-            molecule.
-
-        Returns
-        -------
-        bb_cent_vectors :
-            :class:`dict` mapping :class:`int`: :class:`numpy.ndarray`
-            Dictionary mapping building block ids (keys) to centroid
-            vectors (values) of each distinct building block in the
-            molecule.
-
-        bb_cent_scales :
-            :class:`dict` mapping :class:`int`: :class:`float`
-            Dictionary mapping building block ids (keys) to relative
-            magnitude of centroid vectors (values) of each distinct
-            building block in the molecule.
-
-        """
-
-        cent = mol.get_centroid()
-
-        # Get bb COM vector to molecule COM.
-        bb_cent_vectors = {
-            i: mol.get_centroid(atom_ids=bb_atom_ids[i])-cent
-            for i in bb_atom_ids
-        }
-
-        # Scale the step size based on the different distances of
-        # bbs from the COM. Impacts anisotropic topologies.
-        if self._scale_steps:
-            norms = {
-                i: np.linalg.norm(bb_cent_vectors[i])
-                for i in bb_cent_vectors
-            }
-            max_distance = max(list(norms.values()))
-            bb_cent_scales = {
-                i: norms[i]/max_distance
-                for i in norms
-            }
-        else:
-            bb_cent_scales = {
-                i: 1
-                for i in bb_cent_vectors
-            }
-
-        return bb_cent_vectors, bb_cent_scales
-
-    def _get_bb_atom_ids(self, mol):
-        bb_atom_ids = defaultdict(list)
-        for i in mol.get_atom_infos():
-            bb_atom_ids[i.get_building_block_id()].append(
-                i.get_atom().get_id()
-            )
-
-        return bb_atom_ids
-
     def _get_bond_vector(self, position_matrix, bond_ids):
         atom1_pos = position_matrix[bond_ids[0]]
         atom2_pos = position_matrix[bond_ids[1]]
         return atom2_pos - atom1_pos
-
-    def _get_bb_centroids(self, mol, bb_atom_ids):
-        """
-        Returns dict of building block centroids.
-
-        """
-
-        bb_centroids = {
-            i: mol.get_centroid(atom_ids=bb_atom_ids[i])
-            for i in bb_atom_ids
-        }
-
-        return bb_centroids
 
     def _get_cent_to_lb_vector(
         self,
