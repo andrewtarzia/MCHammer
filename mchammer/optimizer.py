@@ -15,6 +15,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import pdist
 import random
+import networkx as nx
 import uuid
 import os
 import shutil
@@ -479,17 +480,47 @@ class Optimizer:
         plt.close()
 
     def optimize(self, mol):
+    def _get_subunits(self, mol, bonds):
+        """
+        Get connected graphs based on mol separated by bonds.
+
+        """
+
+        # Produce a graph from the molecule that does not include edges
+        # where the bonds to be optimized are.
+        mol_graph = nx.Graph()
+        for atom in mol.get_atoms():
+            mol_graph.add_node(atom.get_id())
+
+        # Add edges.
+        for bond in mol.get_bonds():
+            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
+            if pair_ids not in bonds:
+                mol_graph.add_edge(*pair_ids)
+
+        # Get atom ids in disconnected subgraphs.
+        subunits = {
+            i: sg
+            for i, sg in enumerate(nx.connected_components(mol_graph))
+        }
+
+        return subunits
+
+    def optimize(self, mol, bonds):
         """
         Optimize `mol`.
 
         Parameters
         ----------
-        mol : :class:`stk.ConstructedMolecule`
+        mol : :class:`.Molecule`
             The molecule to be optimized.
+
+        bond_ids :
+            Bonds to optimize.
 
         Returns
         -------
-        mol : :class:`stk.ConstructedMolecule`
+        mol : :class:`.Molecule`
             The optimized molecule.
 
         """
@@ -505,8 +536,13 @@ class Optimizer:
             shutil.rmtree(output_dir)
         os.mkdir(output_dir)
 
-        # Define long bonds to optimise.
-        long_bond_infos = self._get_long_bond_infos(mol)
+        # Find rigid subunits based on bonds to optimize.
+        print(bonds)
+        subunits = self._get_subunits(mol, bonds)
+        print(subunits)
+
+        import sys
+        sys.exit()
 
         # If no long bonds, then optimisation is done.
         if len(long_bond_infos) == 0:
