@@ -241,7 +241,6 @@ class Optimizer:
             '                ----------------------              \n'
             '                                                    \n'
             f' step size = {self._step_size} \n'
-            f' rotation step size = {self._rotation_step_size} \n'
             f' target bond length = {self._target_bond_length} \n'
             f' num. steps = {self._num_steps} \n'
             f' bond epsilon = {self._bond_epsilon} \n'
