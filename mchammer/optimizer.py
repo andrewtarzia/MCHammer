@@ -223,19 +223,24 @@ class Optimizer:
         # block and their neighbours.
         t1 = time.time()
         pair_dists = pdist(position_matrix)
+        print(f'pair_dist timing: {time.time() - t1} s')
+        t1 = time.time()
         non_bonded_potential = np.sum(
             self._non_bond_potential(pair_dists)
         )
-        print(f'nbp timing: {time.time() - t1} s')
+        print(f'iteration timing: {time.time() - t1} s')
 
         return non_bonded_potential
 
     def _compute_potential(self, mol, bonds):
-
         position_matrix = mol.get_position_matrix()
-        system_potential = self._compute_non_bonded_potential(
+        t1 = time.time()
+        non_bonded_potential = self._compute_non_bonded_potential(
             position_matrix=position_matrix,
         )
+        print(f'nbp timing: {time.time() - t1} s')
+        t1 = time.time()
+        system_potential = non_bonded_potential
         for bond in bonds:
             system_potential += self._bond_potential(
                 distance=get_atom_distance(
@@ -244,8 +249,9 @@ class Optimizer:
                     atom2_id=bond[1],
                 )
             )
+        print(f'sp timing: {time.time() - t1} s')
 
-        return system_potential
+        return system_potential, non_bonded_potential
 
     def _translate_atoms_along_vector(self, mol, atom_ids, vector):
 
@@ -400,9 +406,12 @@ class Optimizer:
         f.write(self._output_top_lines())
         f.write(f'There are {len(bonds)} long bonds.\n')
         # Find rigid subunits based on bonds to optimize.
+        t1 = time.time()
         subunits = self._get_subunits(mol, bonds)
+        print(f'get_subunits timing: {time.time() - t1} s')
 
         # Define neighbour list based on connected subunits.
+        t1 = time.time()
         if self._use_neighbour_list:
             neighour_lists = {}
             for su in subunits:
@@ -425,9 +434,10 @@ class Optimizer:
                             ][0]
                         )
                 neighour_lists[su] = connected_subunits
-
         else:
             neighour_lists = None
+        print(f'get neigh timing: {time.time() - t1} s')
+
         f.write(
             f'There are {len(subunits)} sub units of sizes: '
             f'{[len(subunits[i]) for i in subunits]}\n'
@@ -436,24 +446,24 @@ class Optimizer:
         if self._use_neighbour_list:
             f.write(f'Neighbour lists: {neighour_lists}\n\n\n')
 
-        system_potential = self._compute_potential(
-            mol=mol,
-            bonds=bonds,
+        t1 = time.time()
+        system_potential, non_bonded_potential = (
+            self._compute_potential(mol=mol, bonds=bonds)
         )
+        print(f'compute pot 1 timing: {time.time() - t1} s')
 
         # Write structures at each step to file.
+        t1 = time.time()
         mol.write_xyz_file(os.path.join(output_dir, f'coll_0.xyz'))
+        print(f'write xyz timing: {time.time() - t1} s')
 
         # Update properties at each step.
+        t1 = time.time()
         system_properties = {
             'steps': [0],
             'passed': [],
             'total_potential': [system_potential],
-            'nbond_potential': [
-                self._compute_non_bonded_potential(
-                    position_matrix=mol.get_position_matrix(),
-                )
-            ],
+            'nbond_potential': [non_bonded_potential],
             'max_bond_distance': [max([
                 get_atom_distance(
                     position_matrix=mol.get_position_matrix(),
@@ -474,9 +484,11 @@ class Optimizer:
             f"{system_properties['max_bond_distance'][-1]} "
             '-- --\n'
         )
+        print(f'prop_update timing: {time.time() - t1} s')
 
         for step in range(1, self._num_steps):
             step_begin_time = time.time()
+            t1 = time.time()
             position_matrix = mol.get_position_matrix()
 
             # Randomly select a bond to optimize from bonds.
@@ -520,17 +532,21 @@ class Optimizer:
                 com_translation,
             ])
 
+            print(f'selection timing: {time.time() - t1} s')
             # Translate building block.
             # Update atom position of building block.
+            t1 = time.time()
             mol = self._translate_atoms_along_vector(
                 mol=mol,
                 atom_ids=moving_su_atom_ids,
                 vector=translation_vector,
             )
+            print(f'translation timing: {time.time() - t1} s')
 
             # Define a random rotation of a random subunit out of the
             # two options.
             # Random number from -1 to 1 for multiplying rotation.
+            t1 = time.time()
             rand = (random.random() - 0.5) * 2
             rotation_angle = self._rotation_step_size * rand
             rotation_axis = normalize_vector(np.array(su_cent_vector))
@@ -543,15 +559,18 @@ class Optimizer:
                 axis=rotation_axis,
                 origin=mol.get_centroid(atom_ids=moving_su_atom_ids),
             )
-            new_system_potential = self._compute_potential(
-                mol=mol,
-                bonds=bonds,
+            print(f'rot timing: {time.time() - t1} s')
+            t1 = time.time()
+            new_system_potential, new_non_bonded_potential = (
+                self._compute_potential(mol=mol, bonds=bonds)
             )
-            print(step, subunit_1, subunit_2, new_system_potential)
+            print(f'comput potstep timing: {time.time() - t1} s')
 
+            t1 = time.time()
             if self._test_move(system_potential, new_system_potential):
                 updated = 'T'
                 system_potential = new_system_potential
+                non_bonded_potential = new_non_bonded_potential
                 system_properties['passed'].append(step)
             else:
                 updated = 'F'
@@ -561,7 +580,9 @@ class Optimizer:
                     atom_ids=moving_su_atom_ids,
                     vector=-translation_vector,
                 )
+            print(f'test move timing: {time.time() - t1} s')
 
+            t1 = time.time()
             # Write structures at each step to file.
             mol.write_xyz_file(
                 os.path.join(output_dir, f'coll_{step}.xyz')
@@ -573,9 +594,7 @@ class Optimizer:
                 system_potential
             )
             system_properties['nbond_potential'].append(
-                self._compute_non_bonded_potential(
-                    position_matrix=mol.get_position_matrix(),
-                )
+                non_bonded_potential
             )
             system_properties['max_bond_distance'].append(max([
                 get_atom_distance(
@@ -593,6 +612,7 @@ class Optimizer:
                 f'{bond_ids} {updated}\n'
             )
             step += 1
+            print(f'update step timing: {time.time() - t1} s')
             print(f'Step time: {time.time() - step_begin_time} s')
 
         f.write('\n============================================\n')
