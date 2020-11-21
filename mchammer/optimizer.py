@@ -223,12 +223,12 @@ class Optimizer:
         # block and their neighbours.
         t1 = time.time()
         pair_dists = pdist(position_matrix)
-        non_bonded_potential = (
-            self._non_bond_potential(i) for i in pair_dists
+        non_bonded_potential = np.sum(
+            self._non_bond_potential(pair_dists)
         )
         print(f'nbp timing: {time.time() - t1} s')
 
-        return sum(non_bonded_potential)
+        return non_bonded_potential
 
     def _compute_potential(self, mol, bonds):
 
