@@ -70,15 +70,16 @@ class Optimizer:
         self,
         output_dir,
         step_size,
-        rotation_step_size,
         target_bond_length,
         num_steps,
+        rotation_step_size=None,
         bond_epsilon=50,
         nonbond_epsilon=20,
         nonbond_sigma=1.2,
         nonbond_mu=3,
         beta=2,
         random_seed=1000,
+        use_rotations=False,
     ):
         """
         Initialize a :class:`Collapser` instance.
@@ -93,15 +94,16 @@ class Optimizer:
         step_size : :class:`float`
             The relative size of the step to take during step.
 
-        rotation_step_size : :class:`float`
-            Maximum rotation step to take in radians.
-
         target_bond_length : :class:`float`
             Target equilibrium bond length for long bonds to minimize
             to.
 
         num_steps : :class:`int`
             Number of MC moves to perform.
+
+        rotation_step_size : :class:`float`, optional
+            Maximum rotation step to take in radians. Defaults to
+            ``None``
 
         bond_epsilon : :class:`float`, optional
             Value of epsilon used in the bond potential in MC moves.
@@ -132,6 +134,8 @@ class Optimizer:
             ``None`` if system-based random seed is desired. Defaults
             to 1000.
 
+        use_rotations :
+
         """
 
         self._output_dir = output_dir
@@ -148,6 +152,7 @@ class Optimizer:
             random.seed()
         else:
             random.seed(random_seed)
+        self._use_rotations = use_rotations
 
     def _get_bond_vector(self, position_matrix, bond_ids):
         atom1_pos = position_matrix[bond_ids[0]]
@@ -500,23 +505,27 @@ class Optimizer:
             )
             print(f'translation timing: {time.time() - t1} s')
 
-            # Define a random rotation of a random subunit out of the
-            # two options.
-            # Random number from -1 to 1 for multiplying rotation.
-            t1 = time.time()
-            rand = (random.random() - 0.5) * 2
-            rotation_angle = self._rotation_step_size * rand
-            rotation_axis = normalize_vector(np.array(su_cent_vector))
+            if self._use_rotations:
+                # Define a random rotation of a random subunit out of
+                # the two options.
+                # Random number from -1 to 1 for multiplying rotation.
+                t1 = time.time()
+                rand = (random.random() - 0.5) * 2
+                rotation_angle = self._rotation_step_size * rand
+                rotation_axis = normalize_vector(
+                    np.array(su_cent_vector)
+                )
 
-            # Rotate the subunit.
-            mol = self._rotate_atoms_by_angle(
-                mol=mol,
-                atom_ids=moving_su_atom_ids,
-                angle=rotation_angle,
-                axis=rotation_axis,
-                origin=mol.get_centroid(atom_ids=moving_su_atom_ids),
-            )
-            print(f'rot timing: {time.time() - t1} s')
+                # Rotate the subunit.
+                mol = self._rotate_atoms_by_angle(
+                    mol=mol,
+                    atom_ids=moving_su_atom_ids,
+                    angle=rotation_angle,
+                    axis=rotation_axis,
+                    origin=mol.get_centroid(moving_su_atom_ids),
+                )
+                print(f'rot timing: {time.time() - t1} s')
+
             t1 = time.time()
             new_system_potential, new_non_bonded_potential = (
                 self._compute_potential(mol=mol, bonds=bonds)
