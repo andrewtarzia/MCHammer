@@ -218,12 +218,7 @@ class Optimizer:
             )
         )
 
-    def _compute_non_bonded_potential(
-        self,
-        position_matrix,
-        subunits,
-        neighour_lists
-    ):
+    def _compute_non_bonded_potential(self, position_matrix):
         # Get all pairwise distances between atoms in each building
         # block and their neighbours.
         t1 = time.time()
@@ -231,20 +226,15 @@ class Optimizer:
         non_bonded_potential = (
             self._non_bond_potential(i) for i in pair_dists
         )
-        print(
-            f'nbp1: '
-            f'{time.time() - t1}'
-        )
+        print(f'nbp timing: {time.time() - t1} s')
 
         return sum(non_bonded_potential)
 
-    def _compute_potential(self, mol, subunits, bonds, neighour_lists):
+    def _compute_potential(self, mol, bonds):
 
         position_matrix = mol.get_position_matrix()
         system_potential = self._compute_non_bonded_potential(
             position_matrix=position_matrix,
-            subunits=subunits,
-            neighour_lists=neighour_lists,
         )
         for bond in bonds:
             system_potential += self._bond_potential(
@@ -449,8 +439,6 @@ class Optimizer:
         system_potential = self._compute_potential(
             mol=mol,
             bonds=bonds,
-            subunits=subunits,
-            neighour_lists=neighour_lists,
         )
 
         # Write structures at each step to file.
@@ -464,8 +452,6 @@ class Optimizer:
             'nbond_potential': [
                 self._compute_non_bonded_potential(
                     position_matrix=mol.get_position_matrix(),
-                    subunits=subunits,
-                    neighour_lists=neighour_lists,
                 )
             ],
             'max_bond_distance': [max([
@@ -560,8 +546,6 @@ class Optimizer:
             new_system_potential = self._compute_potential(
                 mol=mol,
                 bonds=bonds,
-                subunits=subunits,
-                neighour_lists=neighour_lists,
             )
             print(step, subunit_1, subunit_2, new_system_potential)
 
@@ -591,8 +575,6 @@ class Optimizer:
             system_properties['nbond_potential'].append(
                 self._compute_non_bonded_potential(
                     position_matrix=mol.get_position_matrix(),
-                    subunits=subunits,
-                    neighour_lists=neighour_lists,
                 )
             )
             system_properties['max_bond_distance'].append(max([
@@ -611,16 +593,13 @@ class Optimizer:
                 f'{bond_ids} {updated}\n'
             )
             step += 1
+            print(f'Step time: {time.time() - step_begin_time} s')
 
         f.write('\n============================================\n')
         f.write(
             'Optimisation done:\n'
             f"{len(system_properties['passed'])} steps passed: "
             f"{len(system_properties['passed'])/self._num_steps}"
-        )
-
-        print(
-            f'Step time: {time.time() - step_begin_time}'
         )
 
         self._plot_progess(system_properties, output_dir)
@@ -662,6 +641,6 @@ class Optimizer:
         with open(os.path.join(output_dir, f'coll.out'), 'w') as f:
             mol = self._run_optimization(mol, bonds, output_dir, f)
 
-        print(f'Total optimisation time: {time.time() - begin_time}')
+        print(f'Total optimisation time: {time.time() - begin_time}s')
 
         return mol
