@@ -147,33 +147,6 @@ class Optimizer:
         atom2_pos = position_matrix[bond_ids[1]]
         return atom2_pos - atom1_pos
 
-    def _get_cent_to_lb_vector(
-        self,
-        mol,
-        bb_centroids,
-        long_bond_infos
-    ):
-        """
-        Returns dict of long bond atom to bb centroid vectors.
-
-        """
-
-        position_matrix = mol.get_position_matrix()
-        centroid_to_lb_vectors = {}
-        for bb in bb_centroids:
-            cent = bb_centroids[bb]
-            for b_atom_ids, bond_info in long_bond_infos.items():
-                for atom_id in b_atom_ids:
-                    atom_info, = mol.get_atom_infos(atom_ids=atom_id)
-                    atom_pos = position_matrix[atom_id]
-                    if atom_info.get_building_block_id() == bb:
-                        centroid_to_lb_vectors[(bb, atom_id)] = (
-                            atom_pos - cent,
-                        )
-                        break
-
-        return centroid_to_lb_vectors
-
     def _bond_potential(self, distance):
         """
         Define an arbitrary parabolic bond potential.
