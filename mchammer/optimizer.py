@@ -78,7 +78,7 @@ class Optimizer:
         nonbond_sigma=1.2,
         nonbond_mu=3,
         beta=2,
-        random_seed=None,
+        random_seed=1000,
         use_neighbour_list=True,
     ):
         """
@@ -128,11 +128,10 @@ class Optimizer:
             place of the inverse boltzmann temperature.
             Defaults to 2.
 
-        random_seed : :class:`int`, optional
-            Random seed to use for MC algorithm. Should only be set
-            if exactly reproducible results are required, otherwise
-            a system-based random seed should be used for proper
-            sampling.
+        random_seed : :class:`int` or :class:`NoneType`, optional
+            Random seed to use for MC algorithm. Should only be set to
+            ``None`` if system-based random seed is desired. Defaults
+            to 1000.
 
         use_neighbour_list : :class:`bool`, optional
             ``True`` to use neighbour list defined by immediately
