@@ -79,7 +79,6 @@ class Optimizer:
         nonbond_mu=3,
         beta=2,
         random_seed=1000,
-        use_neighbour_list=True,
     ):
         """
         Initialize a :class:`Collapser` instance.
@@ -133,13 +132,6 @@ class Optimizer:
             ``None`` if system-based random seed is desired. Defaults
             to 1000.
 
-        use_neighbour_list : :class:`bool`, optional
-            ``True`` to use neighbour list defined by immediately
-            connected sub units, which are defined by bonds to be
-            optimized. Neighbour lists will speed up the algorithm
-            but may lead to steric clashes in complex systems.
-            Defaults to ``True``.
-
         """
 
         self._output_dir = output_dir
@@ -156,7 +148,6 @@ class Optimizer:
             random.seed()
         else:
             random.seed(random_seed)
-        self._use_neighbour_list = use_neighbour_list
 
     def _get_bond_vector(self, position_matrix, bond_ids):
         atom1_pos = position_matrix[bond_ids[0]]
@@ -218,8 +209,7 @@ class Optimizer:
         )
 
     def _compute_non_bonded_potential(self, position_matrix):
-        # Get all pairwise distances between atoms in each building
-        # block and their neighbours.
+        # Get all pairwise distances between atoms in each subunut.
         t1 = time.time()
         pair_dists = pdist(position_matrix)
         print(f'pair_dist timing: {time.time() - t1} s')
@@ -323,7 +313,6 @@ class Optimizer:
             f' nonbond sigma = {self._nonbond_sigma} \n'
             f' nonbond mu = {self._nonbond_mu} \n'
             f' beta = {self._beta} \n'
-            f' neighbour lists used? = {self._use_neighbour_list} \n'
             '====================================================\n\n'
         )
 
@@ -409,41 +398,10 @@ class Optimizer:
         subunits = self._get_subunits(mol, bonds)
         print(f'get_subunits timing: {time.time() - t1} s')
 
-        # Define neighbour list based on connected subunits.
-        t1 = time.time()
-        if self._use_neighbour_list:
-            neighour_lists = {}
-            for su in subunits:
-                connected_subunits = []
-                for bond_ids in bonds:
-                    if bond_ids[0] in subunits[su]:
-                        connected_subunits.append(
-                            [
-                                i
-                                for i in subunits
-                                if bond_ids[1] in subunits[i]
-                            ][0]
-                        )
-                    elif bond_ids[1] in subunits[su]:
-                        connected_subunits.append(
-                            [
-                                i
-                                for i in subunits
-                                if bond_ids[0] in subunits[i]
-                            ][0]
-                        )
-                neighour_lists[su] = connected_subunits
-        else:
-            neighour_lists = None
-        print(f'get neigh timing: {time.time() - t1} s')
-
         f.write(
             f'There are {len(subunits)} sub units of sizes: '
             f'{[len(subunits[i]) for i in subunits]}\n'
         )
-
-        if self._use_neighbour_list:
-            f.write(f'Neighbour lists: {neighour_lists}\n\n\n')
 
         t1 = time.time()
         system_potential, non_bonded_potential = (
