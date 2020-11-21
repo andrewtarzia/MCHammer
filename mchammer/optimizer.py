@@ -10,6 +10,7 @@ Optimizer for minimise intermolecular distances.
 
 import logging
 import numpy as np
+import time
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import pdist
 import random
@@ -222,6 +223,11 @@ class Optimizer:
         # Get all pairwise distances.
         pair_dists = pdist(mol.get_position_matrix())
         non_bonded_potential = self._non_bond_potential(pair_dists)
+        t1 = time.time()
+        print(
+            f'nbp1: '
+            f'{time.time() - t1}'
+        )
 
         return sum(non_bonded_potential)
 
@@ -471,6 +477,7 @@ class Optimizer:
         )
 
         for step in range(1, self._num_steps):
+            step_begin_time = time.time()
             position_matrix = mol.get_position_matrix()
 
             # Randomly select a bond to optimize from bonds.
@@ -594,6 +601,10 @@ class Optimizer:
             f"{len(system_properties['passed'])/self._num_steps}"
         )
 
+        print(
+            f'Step time: {time.time() - step_begin_time}'
+        )
+
         self._plot_progess(system_properties, output_dir)
 
         return mol
@@ -617,6 +628,8 @@ class Optimizer:
 
         """
 
+        begin_time = time.time()
+
         # Handle output dir.
         if self._output_dir is None:
             output_dir = str(uuid.uuid4().int)
@@ -630,5 +643,7 @@ class Optimizer:
 
         with open(os.path.join(output_dir, f'coll.out'), 'w') as f:
             mol = self._run_optimization(mol, bonds, output_dir, f)
+
+        print(f'Total optimisation time: {time.time() - begin_time}')
 
         return mol
