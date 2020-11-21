@@ -19,11 +19,7 @@ import uuid
 import os
 import shutil
 
-from .utilities import (
-    get_atom_distance,
-    rotation_matrix_arbitrary_axis,
-    normalize_vector,
-)
+from .utilities import get_atom_distance
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +28,8 @@ logger = logging.getLogger(__name__)
 class Optimizer:
     """
     Collapse molecule to decrease enlarged bonds using MC algorithm.
+
+    NEEDS WRITING:::
 
     Smarter optimisation than Collapser using simple Monte Carlo
     algorithm to perform rigid translations of building blocks.
@@ -72,14 +70,12 @@ class Optimizer:
         step_size,
         target_bond_length,
         num_steps,
-        rotation_step_size=None,
         bond_epsilon=50,
         nonbond_epsilon=20,
         nonbond_sigma=1.2,
         nonbond_mu=3,
         beta=2,
         random_seed=1000,
-        use_rotations=False,
     ):
         """
         Initialize a :class:`Collapser` instance.
@@ -100,10 +96,6 @@ class Optimizer:
 
         num_steps : :class:`int`
             Number of MC moves to perform.
-
-        rotation_step_size : :class:`float`, optional
-            Maximum rotation step to take in radians. Defaults to
-            ``None``
 
         bond_epsilon : :class:`float`, optional
             Value of epsilon used in the bond potential in MC moves.
@@ -134,13 +126,10 @@ class Optimizer:
             ``None`` if system-based random seed is desired. Defaults
             to 1000.
 
-        use_rotations :
-
         """
 
         self._output_dir = output_dir
         self._step_size = step_size
-        self._rotation_step_size = rotation_step_size
         self._target_bond_length = target_bond_length
         self._num_steps = num_steps
         self._bond_epsilon = bond_epsilon
@@ -152,7 +141,6 @@ class Optimizer:
             random.seed()
         else:
             random.seed(random_seed)
-        self._use_rotations = use_rotations
 
     def _get_bond_vector(self, position_matrix, bond_ids):
         atom1_pos = position_matrix[bond_ids[0]]
@@ -255,36 +243,6 @@ class Optimizer:
                 continue
             pos = mol.get_position_matrix()[atom.get_id()]
             new_position_matrix[atom.get_id()] = pos - vector
-
-        mol.update_position_matrix(new_position_matrix)
-        return mol
-
-    def _rotate_atoms_by_angle(
-        self,
-        mol,
-        atom_ids,
-        angle,
-        axis,
-        origin
-    ):
-        ori_position_matrix = mol.get_position_matrix()
-        new_position_matrix = mol.get_position_matrix()
-        # Set the origin of the rotation to "origin".
-        new_position_matrix = new_position_matrix - origin
-        # Perform rotation.
-        rot_mat = rotation_matrix_arbitrary_axis(angle, axis)
-        # Apply the rotation matrix on the position matrix, to get the
-        # new position matrix.
-        new_position_matrix = (rot_mat @ new_position_matrix.T).T
-        # Return the centroid of the molecule to the original position.
-        new_position_matrix = new_position_matrix + origin
-
-        # Reinstate NOT atom_ids with original position matrix.
-        for atom in mol.get_atoms():
-            if atom.get_id() not in atom_ids:
-                new_position_matrix[atom.get_id()] = (
-                    ori_position_matrix[atom.get_id()]
-                )
 
         mol.update_position_matrix(new_position_matrix)
         return mol
@@ -504,27 +462,6 @@ class Optimizer:
                 vector=translation_vector,
             )
             print(f'translation timing: {time.time() - t1} s')
-
-            if self._use_rotations:
-                # Define a random rotation of a random subunit out of
-                # the two options.
-                # Random number from -1 to 1 for multiplying rotation.
-                t1 = time.time()
-                rand = (random.random() - 0.5) * 2
-                rotation_angle = self._rotation_step_size * rand
-                rotation_axis = normalize_vector(
-                    np.array(su_cent_vector)
-                )
-
-                # Rotate the subunit.
-                mol = self._rotate_atoms_by_angle(
-                    mol=mol,
-                    atom_ids=moving_su_atom_ids,
-                    angle=rotation_angle,
-                    axis=rotation_axis,
-                    origin=mol.get_centroid(moving_su_atom_ids),
-                )
-                print(f'rot timing: {time.time() - t1} s')
 
             t1 = time.time()
             new_system_potential, new_non_bonded_potential = (
