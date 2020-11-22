@@ -187,7 +187,7 @@ class Optimizer:
 
         return non_bonded_potential
 
-    def _compute_potential(self, mol, bonds):
+    def _compute_potential(self, mol, bond_pair_ids):
         position_matrix = mol.get_position_matrix()
         t1 = time.time()
         non_bonded_potential = self._compute_non_bonded_potential(
@@ -196,7 +196,7 @@ class Optimizer:
         print(f'nbp timing: {time.time() - t1} s')
         t1 = time.time()
         system_potential = non_bonded_potential
-        for bond in bonds:
+        for bond in bond_pair_ids:
             system_potential += self._bond_potential(
                 distance=get_atom_distance(
                     position_matrix=position_matrix,
@@ -298,7 +298,7 @@ class Optimizer:
         )
         plt.close()
 
-    def _get_subunits(self, mol, bonds):
+    def _get_subunits(self, mol, bond_pair_ids):
         """
         Get connected graphs based on mol separated by bonds.
 
@@ -313,7 +313,7 @@ class Optimizer:
         # Add edges.
         for bond in mol.get_bonds():
             pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
-            if pair_ids not in bonds:
+            if pair_ids not in bond_pair_ids:
                 mol_graph.add_edge(*pair_ids)
 
         # Get atom ids in disconnected subgraphs.
@@ -324,13 +324,13 @@ class Optimizer:
 
         return subunits
 
-    def _run_optimization(self, mol, bonds, output_dir, f):
+    def _run_optimization(self, mol, bond_pair_ids, output_dir, f):
 
         f.write(self._output_top_lines())
-        f.write(f'There are {len(bonds)} long bonds.\n')
+        f.write(f'There are {len(bond_pair_ids)} long bonds.\n')
         # Find rigid subunits based on bonds to optimize.
         t1 = time.time()
-        subunits = self._get_subunits(mol, bonds)
+        subunits = self._get_subunits(mol, bond_pair_ids)
         print(f'get_subunits timing: {time.time() - t1} s')
 
         f.write(
@@ -340,7 +340,10 @@ class Optimizer:
 
         t1 = time.time()
         system_potential, non_bonded_potential = (
-            self._compute_potential(mol=mol, bonds=bonds)
+            self._compute_potential(
+                mol=mol,
+                bond_pair_ids=bond_pair_ids
+            )
         )
         print(f'compute pot 1 timing: {time.time() - t1} s')
 
@@ -362,7 +365,7 @@ class Optimizer:
                     atom1_id=bond[0],
                     atom2_id=bond[1],
                 )
-                for bond in bonds
+                for bond in bond_pair_ids
             ])],
         }
         f.write(
@@ -384,7 +387,7 @@ class Optimizer:
             position_matrix = mol.get_position_matrix()
 
             # Randomly select a bond to optimize from bonds.
-            bond_ids = random.choice(bonds)
+            bond_ids = random.choice(bond_pair_ids)
             bond_vector = self._get_bond_vector(
                 position_matrix=position_matrix,
                 bond_ids=bond_ids
@@ -437,7 +440,10 @@ class Optimizer:
 
             t1 = time.time()
             new_system_potential, new_non_bonded_potential = (
-                self._compute_potential(mol=mol, bonds=bonds)
+                self._compute_potential(
+                    mol=mol,
+                    bond_pair_ids=bond_pair_ids
+                )
             )
             print(f'comput potstep timing: {time.time() - t1} s')
 
@@ -477,7 +483,7 @@ class Optimizer:
                     atom1_id=bond[0],
                     atom2_id=bond[1],
                 )
-                for bond in bonds
+                for bond in bond_pair_ids
             ]))
             f.write(
                 f"{system_properties['steps'][-1]} "
@@ -501,7 +507,7 @@ class Optimizer:
 
         return mol
 
-    def optimize(self, mol, bonds):
+    def optimize(self, mol, bond_pair_ids):
         """
         Optimize `mol`.
 
@@ -510,8 +516,8 @@ class Optimizer:
         mol : :class:`.Molecule`
             The molecule to be optimized.
 
-        bond_ids :
-            Bonds to optimize.
+        bond_pair_ids : :class:`iterable` of :class:`ints`
+            Pair of atom ids with bond between them to optimize.
 
         Returns
         -------
@@ -534,7 +540,12 @@ class Optimizer:
         os.mkdir(output_dir)
 
         with open(os.path.join(output_dir, f'coll.out'), 'w') as f:
-            mol = self._run_optimization(mol, bonds, output_dir, f)
+            mol = self._run_optimization(
+                mol=mol,
+                bond_pair_ids=bond_pair_ids,
+                output_dir=output_dir,
+                f=f
+            )
 
         print(f'Total optimisation time: {time.time() - begin_time}s')
 
