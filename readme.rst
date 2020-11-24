@@ -17,6 +17,32 @@ Install using pip:
 Algorithm
 ---------
 
+MCHammer implements a simple Metropolis Monte-Carlo algorithm to optimize the desired bonds toward a target bond length.
+We use NetworkX to define a graph of the molecule at the atomic level, which is further coarse-grained into ``subunits`` that are separated by the bonds to be optimized.
+All atom positions/bond lengths withina subunit are kept rigid and do not contribute to the potential energy, other than their steric term.
+The algorithm uses a simple Lennard-Jones nonbonded potential and parabolic bond potential to define the potential energy surface such that the target bond length is the energy mininum and steric clashes are avoided.
+
+The MC algorithm is as follows:
+
+For ``step`` in *N* steps:
+    1. Choose a bond ``b`` at random:
+        Using ``random.choice()``.
+    2. Choose a subunit ``s`` on either side of ``b`` at random:
+        Using ``random.choice()``.
+    3. Define two possible translations of ``s``, ``a`` and ``b`` and choose at random:
+        ``a`` is defined by a random [-1, 1) step along the ``s`` to molecule centre of mass (com).
+        ``b`` is defined by a random [-1, 1) step along the vector ``b``. 
+        Step size is defined by user input.
+    4. Compute system potential ``U`` = ``UB`` + ``US``:
+        ``UB`` is the bonded potential, defined by the sum of all parabolic bond stretches about the target bond length for all ``b``.
+        ``US`` is the nonbonded potential, defined by the repulsive part of the Lennard-Jones potential.
+    5. Accept or reject move:
+        Accept if ``U_i`` < ``U_(i-1)`` or ``exp(-beta(U_i - U_(i-1))`` > ``R``, where ``R`` is a random number [0, 1) and ``beta`` is the inverse Boltzmann temperature.
+        Reject otherwise.
+
+
+The workflow for a porous organic cage built using *stk* (<https://stk.readthedocs.io/>) is shown schematically below:
+
 .. image:: https://raw.githubusercontent.com/andrewtarzia/MCHammer/main/docs/workflow.png?sanitize=true
 
 Examples
@@ -78,12 +104,14 @@ In this example, we use *stk* for I/O only with the input file available in exam
 
 
 
-Contributors
-------------
+Contributors and Acknowledgements
+---------------------------------
 
-Lukas Turcani, Steven Bennett
+I developed this code while part of the Jelfs research group at Imperial College London (<http://www.jelfs-group.org/>, <https://github.com/JelfsMaterialsGroup>) as a post doc.
+
+This code was reviewed and editted by: Lukas Turcani (<https://github.com/lukasturcani>), Steven Bennett (<https://github.com/stevenbennett96>)
 
 License
 -------
 
-The project is licensed under the MIT license.
+This project is licensed under the MIT license.
