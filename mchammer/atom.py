@@ -13,7 +13,6 @@ class Atom:
     """
     Atom.
 
-
     """
 
     def __init__(self, id, element_string):
@@ -22,6 +21,11 @@ class Atom:
 
         Parameters
         ----------
+        id : :class:`int`
+            ID to be assigned to atom.
+
+        element_string : :class:`str`
+            Atom element symbol as string.
 
         """
 
@@ -29,9 +33,17 @@ class Atom:
         self._element_string = element_string
 
     def get_id(self):
+        """
+        Get atom ID.
+
+        """
         return self._id
 
     def get_element_string(self):
+        """
+        Get atom element symbol.
+
+        """
         return self._element_string
 
     def __str__(self):

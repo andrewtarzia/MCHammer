@@ -31,7 +31,7 @@ For ``step`` in *N* steps:
         Using ``random.choice()``.
     3. Define two possible translations of ``s``, ``a`` and ``b`` and choose at random:
         ``a`` is defined by a random [-1, 1) step along the ``s`` to molecule centre of mass (com).
-        ``b`` is defined by a random [-1, 1) step along the vector ``b``. 
+        ``b`` is defined by a random [-1, 1) step along the vector ``b``.
         Step size is defined by user input.
     4. Compute system potential ``U`` = ``UB`` + ``US``:
         ``UB`` is the bonded potential, defined by the sum of all parabolic bond stretches about the target bond length for all ``b``.
@@ -41,7 +41,7 @@ For ``step`` in *N* steps:
         Reject otherwise.
 
 
-The workflow for a porous organic cage built using *stk* (<https://stk.readthedocs.io/>) is shown schematically below:
+The workflow for a porous organic cage built using *stk* (<https://stk.readthedocs.io/>) is shown schematically below (this example is shown in ``examples/stk_example.py``):
 
 .. image:: https://raw.githubusercontent.com/andrewtarzia/MCHammer/main/docs/workflow.png?sanitize=true
 
@@ -52,7 +52,7 @@ This code was originally written for use with *stk* (<https://stk.readthedocs.io
 Now it has been generalized to take any molecule (defined by atoms and bonds) and a set of bonds to optimize to some target bond length.
 The algorithm is unphysical in that the bonded and nonbonded potential we apply is meaningless, other than to give a reasonable structure and avoid steric clashes!
 
-In this example, we use *stk* for I/O only with the input file available in examples/
+In this example, we use *stk* for I/O only with the input file available in ``examples/minimum_example.py``:
 
 
 .. code-block:: python

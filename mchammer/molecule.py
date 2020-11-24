@@ -15,7 +15,6 @@ class Molecule:
     """
     Molecule to optimize.
 
-
     """
 
     def __init__(self, atoms, bonds, position_matrix):
@@ -24,6 +23,15 @@ class Molecule:
 
         Parameters
         ----------
+        atoms : :class:`iterable` of :class:`.Atom`
+            Atoms that define the molecule.
+
+        bonds : :class:`iterable` of :class:`.Bond`
+            Bonds between atoms that define the molecule.
+
+        position_matrix : :class:`numpy.ndarray`
+            A ``(n, 3)`` matrix holding the position of every atom in
+            the :class:`.Molecule`.
 
         """
 
@@ -35,12 +43,40 @@ class Molecule:
         )
 
     def get_position_matrix(self):
+        """
+        Return a matrix holding the atomic positions.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The array has the shape ``(n, 3)``. Each row holds the
+            x, y and z coordinates of an atom.
+
+        """
+
         return np.array(self._position_matrix.T)
 
     def update_position_matrix(self, position_matrix):
+        """
+        Update position matrix attribute.
+
+        Parameters
+        ----------
+        position_matrix : :class:`numpy.ndarray`
+            A position matrix of the clone. The shape of the matrix
+            is ``(n, 3)``.
+
+        """
+
         self._position_matrix = np.array(position_matrix.T)
 
     def write_xyz_file(self, path):
+        """
+        Write basic `.xyz` file of Molecule to `path`.
+
+        Connectivity is not maintained in this file type!
+
+        """
 
         coords = self.get_position_matrix()
         content = [0]
@@ -57,10 +93,30 @@ class Molecule:
             f.write(''.join(content))
 
     def get_atoms(self):
+        """
+        Yield the atoms in the molecule, ordered as input.
+
+        Yields
+        ------
+        :class:`.Atom`
+            An atom in the molecule.
+
+        """
+
         for atom in self._atoms:
             yield atom
 
     def get_bonds(self):
+        """
+        Yield the bonds in the molecule, ordered as input.
+
+        Yields
+        ------
+        :class:`.Bond`
+            A bond in the molecule.
+
+        """
+
         for bond in self._bonds:
             yield bond
 

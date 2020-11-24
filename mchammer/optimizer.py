@@ -23,40 +23,10 @@ from .utilities import get_atom_distance
 
 class Optimizer:
     """
-    Collapse molecule to decrease enlarged bonds using MC algorithm.
+    Optimize target bonds using MC algorithm.
 
-    NEEDS WRITING:::
-
-    Smarter optimisation than Collapser using simple Monte Carlo
-    algorithm to perform rigid translations of building blocks.
-
-    This optimizer aims to bring extended bonds closer together for
-    further optimisation.
-
-    .. code-block:: python
-
-        import stk
-        import stko
-
-        bb1 = stk.BuildingBlock('NCCN', [stk.PrimaryAminoFactory()])
-        bb2 = stk.BuildingBlock(
-            smiles='O=CC(C=O)C=O',
-            functional_groups=[stk.AldehydeFactory()],
-        )
-        cage1 = stk.ConstructedMolecule(
-            topology_graph=stk.cage.FourPlusSix((bb1, bb2)),
-        )
-
-        # Perform collapser optimisation.
-        output_dir = f'cage_opt_{cage_name}_coll'
-        optimizer = stko.Collapser(
-            output_dir=output_dir,
-            step_size=0.05,
-            distance_cut=2.0,
-            scale_steps=True,
-        )
-        cage1 = optimizer.optimize(mol=cage1)
-
+    A Metropolis MC algorithm is applied to perform rigid
+    translations of the subunits separatred by the target bonds.
 
     """
 
@@ -138,9 +108,14 @@ class Optimizer:
         else:
             random.seed(random_seed)
 
-    def _get_bond_vector(self, position_matrix, bond_ids):
-        atom1_pos = position_matrix[bond_ids[0]]
-        atom2_pos = position_matrix[bond_ids[1]]
+    def _get_bond_vector(self, position_matrix, bond_pair):
+        """
+        Get vector from atom1 to atom2 in bond.
+
+        """
+
+        atom1_pos = position_matrix[bond_pair[0]]
+        atom2_pos = position_matrix[bond_pair[1]]
         return atom2_pos - atom1_pos
 
     def _bond_potential(self, distance):
@@ -156,7 +131,7 @@ class Optimizer:
 
         return potential
 
-    def _non_bond_potential(self, distance):
+    def _nonbond_potential(self, distance):
         """
         Define an arbitrary repulsive nonbonded potential.
 
@@ -170,21 +145,21 @@ class Optimizer:
             )
         )
 
-    def _compute_non_bonded_potential(self, position_matrix):
+    def _compute_nonbonded_potential(self, position_matrix):
         # Get all pairwise distances between atoms in each subunut.
         pair_dists = pdist(position_matrix)
-        non_bonded_potential = np.sum(
-            self._non_bond_potential(pair_dists)
+        nonbonded_potential = np.sum(
+            self._nonbond_potential(pair_dists)
         )
 
-        return non_bonded_potential
+        return nonbonded_potential
 
     def _compute_potential(self, mol, bond_pair_ids):
         position_matrix = mol.get_position_matrix()
-        non_bonded_potential = self._compute_non_bonded_potential(
+        nonbonded_potential = self._compute_nonbonded_potential(
             position_matrix=position_matrix,
         )
-        system_potential = non_bonded_potential
+        system_potential = nonbonded_potential
         for bond in bond_pair_ids:
             system_potential += self._bond_potential(
                 distance=get_atom_distance(
@@ -194,7 +169,7 @@ class Optimizer:
                 )
             )
 
-        return system_potential, non_bonded_potential
+        return system_potential, nonbonded_potential
 
     def _translate_atoms_along_vector(self, mol, atom_ids, vector):
 
@@ -335,7 +310,7 @@ class Optimizer:
             '====================================================\n\n'
         )
 
-        system_potential, non_bonded_potential = (
+        system_potential, nonbonded_potential = (
             self._compute_potential(
                 mol=mol,
                 bond_pair_ids=bond_pair_ids
@@ -350,7 +325,7 @@ class Optimizer:
             'steps': [0],
             'passed': [],
             'total_potential': [system_potential],
-            'nbond_potential': [non_bonded_potential],
+            'nbond_potential': [nonbonded_potential],
             'max_bond_distance': [max([
                 get_atom_distance(
                     position_matrix=mol.get_position_matrix(),
@@ -379,7 +354,7 @@ class Optimizer:
             bond_ids = random.choice(bond_pair_ids)
             bond_vector = self._get_bond_vector(
                 position_matrix=position_matrix,
-                bond_ids=bond_ids
+                bond_pair=bond_ids
             )
 
             # Get subunits connected by selected bonds.
@@ -424,7 +399,7 @@ class Optimizer:
                 vector=translation_vector,
             )
 
-            new_system_potential, new_non_bonded_potential = (
+            new_system_potential, new_nonbonded_potential = (
                 self._compute_potential(
                     mol=mol,
                     bond_pair_ids=bond_pair_ids
@@ -434,7 +409,7 @@ class Optimizer:
             if self._test_move(system_potential, new_system_potential):
                 updated = 'T'
                 system_potential = new_system_potential
-                non_bonded_potential = new_non_bonded_potential
+                nonbonded_potential = new_nonbonded_potential
                 system_properties['passed'].append(step)
             else:
                 updated = 'F'
@@ -456,7 +431,7 @@ class Optimizer:
                 system_potential
             )
             system_properties['nbond_potential'].append(
-                non_bonded_potential
+                nonbonded_potential
             )
             system_properties['max_bond_distance'].append(max([
                 get_atom_distance(
