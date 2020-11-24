@@ -26,8 +26,10 @@ This code was originally written for use with *stk* (<https://stk.readthedocs.io
 Now it has been generalized to take any molecule (defined by atoms and bonds) and a set of bonds to optimize to some target bond length.
 The algorithm is unphysical in that the bonded and nonbonded potential we apply is meaningless, other than to give a reasonable structure and avoid steric clashes!
 
-In this example, we use *stk* for I/O only with the input file available in examples/::
+In this example, we use *stk* for I/O only with the input file available in examples/
 
+
+.. code-block:: python
     # Load in molecule with stk.
     benzene = stk.BuildingBlock.init_from_file('benzene.mol')
     # Define atoms and bonds.
