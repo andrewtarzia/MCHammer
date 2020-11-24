@@ -22,7 +22,7 @@ Algorithm
 Examples
 --------
 
-This code was originally written for use with *stk*a (<https://stk.readthedocs.io/>), which assembles structures with long bonds that we wanted to optimize quickly.
+This code was originally written for use with *stk* (<https://stk.readthedocs.io/>), which assembles structures with long bonds that we wanted to optimize quickly.
 Now it has been generalized to take any molecule (defined by atoms and bonds) and a set of bonds to optimize to some target bond length.
 The algorithm is unphysical in that the bonded and nonbonded potential we apply is meaningless, other than to give a reasonable structure and avoid steric clashes!
 
