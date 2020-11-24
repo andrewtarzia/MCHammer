@@ -30,6 +30,7 @@ In this example, we use *stk* for I/O only with the input file available in exam
 
 
 .. code-block:: python
+
     # Load in molecule with stk.
     benzene = stk.BuildingBlock.init_from_file('benzene.mol')
     # Define atoms and bonds.
