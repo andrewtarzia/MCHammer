@@ -8,7 +8,6 @@ Optimizer for minimise intermolecular distances.
 
 """
 
-import logging
 import numpy as np
 import time
 import matplotlib.pyplot as plt
@@ -20,9 +19,6 @@ import os
 import shutil
 
 from .utilities import get_atom_distance
-
-
-logger = logging.getLogger(__name__)
 
 
 class Optimizer:
