@@ -474,8 +474,10 @@ class Optimizer:
         mol : :class:`.Molecule`
             The molecule to be optimized.
 
-        bond_pair_ids : :class:`iterable` of :class:`ints`
-            Pair of atom ids with bond between them to optimize.
+        bond_pair_ids :
+            :class:`iterable` of :class:`tuple` of :class:`ints`
+            Iterable of pairs of atom ids with bond between them to
+            optimize.
 
         Returns
         -------
