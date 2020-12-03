@@ -70,14 +70,11 @@ class Molecule:
 
         self._position_matrix = np.array(position_matrix.T)
 
-    def write_xyz_file(self, path):
+    def _write_xyz_content(self):
         """
-        Write basic `.xyz` file of Molecule to `path`.
-
-        Connectivity is not maintained in this file type!
+        Write basic `.xyz` file content of Molecule.
 
         """
-
         coords = self.get_position_matrix()
         content = [0]
         for i, atom in enumerate(self.get_atoms(), 1):
@@ -87,7 +84,18 @@ class Molecule:
             )
         # Set first line to the atom_count.
         content[0] = f'{i}\n\n'
-        content = ''.join(content)
+
+        return content
+
+    def write_xyz_file(self, path):
+        """
+        Write basic `.xyz` file of Molecule to `path`.
+
+        Connectivity is not maintained in this file type!
+
+        """
+
+        content = self._write_xyz_content()
 
         with open(path, 'w') as f:
             f.write(''.join(content))
