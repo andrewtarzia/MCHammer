@@ -9,6 +9,10 @@ Bond class.
 """
 
 
+class AtomIDOrderingError(Exception):
+    ...
+
+
 class Bond:
     """
     Bond between two atoms.
@@ -34,6 +38,12 @@ class Bond:
         """
 
         self._id = id
+        if atom1_id > atom2_id:
+            raise AtomIDOrderingError(
+                f'Atom 1 ID ({atom1_id}) must be less than Atom 2 ID'
+                f'({atom2_id}).'
+            )
+
         self._atom1_id = atom1_id
         self._atom2_id = atom2_id
 
