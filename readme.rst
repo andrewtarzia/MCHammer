@@ -12,7 +12,7 @@ Installation
 
 Install using pip:
 
-    pip install XXXXX
+    pip install MCHammer
 
 Algorithm
 ---------
