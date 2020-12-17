@@ -50,4 +50,4 @@ class Atom:
         return repr(self)
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} at {id(self)}>'
+        return f'{self.get_element_string()}(id={self.get_id()})'

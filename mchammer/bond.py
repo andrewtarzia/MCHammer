@@ -75,4 +75,8 @@ class Bond:
         return repr(self)
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} at {id(self)}>'
+        return (
+            f'{self.__class__.__name__}(id={self.get_id()}, '
+            f'atom1_id={self.get_atom1_id}, '
+            f'atom2_id={self.get_atom2_id})'
+        )
