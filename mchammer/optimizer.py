@@ -266,9 +266,26 @@ class Optimizer:
         )
         plt.close()
 
-    def _get_subunits(self, mol, bond_pair_ids):
+    def get_subunits(self, mol, bond_pair_ids):
         """
         Get connected graphs based on mol separated by bonds.
+
+        Parameters
+        ----------
+        mol : :class:`.Molecule`
+            The molecule to be optimized.
+
+        bond_pair_ids :
+            :class:`iterable` of :class:`tuple` of :class:`ints`
+            Iterable of pairs of atom ids with bond between them to
+            optimize.
+
+        Returns
+        -------
+        subunits : :class:`.dict`
+            The subunits of `mol` split by bonds defined by
+            `bond_pair_ids`. Key is subunit identifier, Value is
+            :class:`iterable` of atom ids in subunit.
 
         """
 
@@ -292,14 +309,19 @@ class Optimizer:
 
         return subunits
 
-    def _run_optimization(self, mol, bond_pair_ids, output_dir, f):
+    def _run_optimization(
+        self,
+        mol,
+        bond_pair_ids,
+        subunits,
+        output_dir,
+        f
+    ):
 
         begin_time = time.time()
 
         f.write(self._output_top_lines())
         f.write(f'There are {len(bond_pair_ids)} bonds to optimize.\n')
-        # Find rigid subunits based on bonds to optimize.
-        subunits = self._get_subunits(mol, bond_pair_ids)
         f.write(
             f'There are {len(subunits)} sub units with N atoms:\n'
             f'{[len(subunits[i]) for i in subunits]}\n'
@@ -465,7 +487,7 @@ class Optimizer:
 
         return mol
 
-    def optimize(self, mol, bond_pair_ids):
+    def optimize(self, mol, bond_pair_ids, subunits):
         """
         Optimize `mol`.
 
@@ -478,6 +500,11 @@ class Optimizer:
             :class:`iterable` of :class:`tuple` of :class:`ints`
             Iterable of pairs of atom ids with bond between them to
             optimize.
+
+        subunits : :class:`.dict`
+            The subunits of `mol` split by bonds defined by
+            `bond_pair_ids`. Key is subunit identifier, Value is
+            :class:`iterable` of atom ids in subunit.
 
         Returns
         -------
@@ -501,6 +528,7 @@ class Optimizer:
             mol = self._run_optimization(
                 mol=mol,
                 bond_pair_ids=bond_pair_ids,
+                subunits=subunits,
                 output_dir=output_dir,
                 f=f
             )
