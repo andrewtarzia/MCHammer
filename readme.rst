@@ -116,6 +116,9 @@ This method is now public, so that users can modify the defined subunits to enfo
 I.e. non-covalent complexes will be distinct subunits because there is no bond between them, and the user can merge them into one subunit by merging the iterable of atom ids in the `subunits` dictionary, to force the algorithm to treat them as one rigid body.
 An example of this is given in ``examples/stk_example.py`` using an arbitrary non-covalent complex BuildingBlock.
 
+As part of this code, I also provide the `Collapser` class, which is a naive precursor to MCHammer that simply moves all subunits toward the molecule centre of mass until a distance threshold is met.
+This can sometimes be faster than MCHammer for some molecule types.
+
 Contributors and Acknowledgements
 ---------------------------------
 
