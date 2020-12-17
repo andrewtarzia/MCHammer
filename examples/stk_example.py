@@ -118,8 +118,7 @@ optimizer = mch.Optimizer(
     target_bond_length=1.2,
     num_steps=500,
 )
-subunits = optimizer.get_subunits(
-    mol=mch_mol,
+subunits = mch_mol.get_subunits(
     bond_pair_ids=stk_long_bond_ids,
 )
 # Just get final step.
@@ -135,8 +134,7 @@ optimizer = mch.Optimizer(
     target_bond_length=1.2,
     num_steps=500,
 )
-subunits = optimizer.get_subunits(
-    mol=mch_mol_nci,
+subunits = mch_mol_nci.get_subunits(
     bond_pair_ids=stk_long_bond_ids,
 )
 # Just get final step.

@@ -97,8 +97,7 @@ In this example, we use *stk* for I/O only with the input file available in ``ex
         target_bond_length=target_bond_length,
         num_steps=100,
     )
-    subunits = optimizer.get_subunits(
-        mol=mch_mol,
+    subunits = mch_mol.get_subunits(
         bond_pair_ids=((2, 3), (1, 5)),
     )
     mch_result = optimizer.get_trajectory(

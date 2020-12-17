@@ -4,7 +4,7 @@ MCHammer Optimizer
 
 #. :class:`.Optimizer`
 
-Optimizer for minimise intermolecular distances.
+Optimizer for minimising intermolecular distances.
 
 """
 
@@ -13,7 +13,6 @@ import time
 
 from scipy.spatial.distance import pdist
 import random
-import networkx as nx
 
 from .results import Result, StepResult
 from .utilities import get_atom_distance
@@ -209,49 +208,6 @@ class Optimizer:
         )
 
         return string
-
-    def get_subunits(self, mol, bond_pair_ids):
-        """
-        Get connected graphs based on mol separated by bonds.
-
-        Parameters
-        ----------
-        mol : :class:`.Molecule`
-            The molecule to be optimized.
-
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
-
-        Returns
-        -------
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
-
-        """
-
-        # Produce a graph from the molecule that does not include edges
-        # where the bonds to be optimized are.
-        mol_graph = nx.Graph()
-        for atom in mol.get_atoms():
-            mol_graph.add_node(atom.get_id())
-
-        # Add edges.
-        for bond in mol.get_bonds():
-            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
-            if pair_ids not in bond_pair_ids:
-                mol_graph.add_edge(*pair_ids)
-
-        # Get atom ids in disconnected subgraphs.
-        subunits = {
-            i: sg
-            for i, sg in enumerate(nx.connected_components(mol_graph))
-        }
-
-        return subunits
 
     def _run_first_step(
         self,

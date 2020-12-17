@@ -9,6 +9,7 @@ Molecule class for optimisation.
 """
 
 import numpy as np
+import networkx as nx
 
 
 class Molecule:
@@ -166,6 +167,46 @@ class Molecule:
             self._position_matrix[:, atom_ids].sum(axis=1),
             len(atom_ids)
         )
+
+    def get_subunits(self, bond_pair_ids):
+        """
+        Get connected graphs based on Molecule separated by bonds.
+
+        Parameters
+        ----------
+        bond_pair_ids :
+            :class:`iterable` of :class:`tuple` of :class:`ints`
+            Iterable of pairs of atom ids with bond between them to
+            optimize.
+
+        Returns
+        -------
+        subunits : :class:`.dict`
+            The subunits of `mol` split by bonds defined by
+            `bond_pair_ids`. Key is subunit identifier, Value is
+            :class:`iterable` of atom ids in subunit.
+
+        """
+
+        # Produce a graph from the molecule that does not include edges
+        # where the bonds to be optimized are.
+        mol_graph = nx.Graph()
+        for atom in self.get_atoms():
+            mol_graph.add_node(atom.get_id())
+
+        # Add edges.
+        for bond in self.get_bonds():
+            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
+            if pair_ids not in bond_pair_ids:
+                mol_graph.add_edge(*pair_ids)
+
+        # Get atom ids in disconnected subgraphs.
+        subunits = {
+            i: sg
+            for i, sg in enumerate(nx.connected_components(mol_graph))
+        }
+
+        return subunits
 
     def __str__(self):
         return repr(self)
