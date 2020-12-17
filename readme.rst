@@ -53,14 +53,19 @@ This code was originally written for use with *stk* (<https://stk.readthedocs.io
 Now it has been generalized to take any molecule (defined by atoms and bonds) and a set of bonds to optimize to some target bond length.
 The algorithm is unphysical in that the bonded and nonbonded potential we apply is meaningless, other than to give a reasonable structure for futher optimisation or use in a workflow!
 
+The Optimizer class provides two main method: `get_result` and `get_trajectory`, which provide the optimized structure and properties or the structure and properties of each MC step, respectively.
+The molecule at each step of the trajectory and its properties can be collected from the results of the get_trajectory method, but not the get_result method (the example file: ``examples/minimum_example.py`` shows how to plot the optimisation progress and output the trajectory).
+
 In this example, we use *stk* for I/O only with the input file available in ``examples/minimum_example.py``:
 
 
 .. code-block:: python
 
-    # Load in molecule with stk.
+    import stk
+    import mchammer as mch
+
+
     benzene = stk.BuildingBlock.init_from_file('benzene.mol')
-    # Define atoms and bonds.
     benzene_atoms = [
         (atom.get_id(), atom.__class__.__name__)
         for atom in benzene.get_atoms()
@@ -75,7 +80,6 @@ In this example, we use *stk* for I/O only with the input file available in ``ex
         )
         benzene_bonds.append((i, b_ids))
 
-    # Define MCHammer molecule.
     mch_mol = mch.Molecule(
         atoms=(
             mch.Atom(id=i[0], element_string=i[1]) for i in benzene_atoms
@@ -87,25 +91,24 @@ In this example, we use *stk* for I/O only with the input file available in ``ex
         position_matrix=benzene.get_position_matrix(),
     )
 
-    # Define optimizer.
+    target_bond_length = 1.2
     optimizer = mch.Optimizer(
-        output_dir='benzene_mch',
         step_size=0.25,
-        target_bond_length=1.2,
+        target_bond_length=target_bond_length,
         num_steps=100,
     )
     subunits = optimizer.get_subunits(
         mol=mch_mol,
         bond_pair_ids=((2, 3), (1, 5)),
     )
-    mch_mol = optimizer.optimize(
+    mch_result = optimizer.get_trajectory(
         mol=mch_mol,
         bond_pair_ids=((2, 3), (1, 5)),
         subunits=subunits,
     )
-
-    # Update stk molecule and write to file.
-    benzene = benzene.with_position_matrix(mch_mol.get_position_matrix())
+    benzene = benzene.with_position_matrix(
+        mch_result.get_final_position_matrix()
+    )
     benzene.write('benzene_opt.mol')
 
 

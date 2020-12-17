@@ -10,14 +10,12 @@ Optimizer for minimise intermolecular distances.
 
 import numpy as np
 import time
-import matplotlib.pyplot as plt
+
 from scipy.spatial.distance import pdist
 import random
 import networkx as nx
-import uuid
-import os
-import shutil
 
+from .results import Result, StepResult
 from .utilities import get_atom_distance
 
 
@@ -32,7 +30,6 @@ class Optimizer:
 
     def __init__(
         self,
-        output_dir,
         step_size,
         target_bond_length,
         num_steps,
@@ -48,11 +45,6 @@ class Optimizer:
 
         Parameters
         ----------
-        output_dir : :class:`str`
-            The name of the directory into which files generated during
-            the calculation are written, if ``None`` then
-            :func:`uuid.uuid4` is used.
-
         step_size : :class:`float`
             The relative size of the step to take during step.
 
@@ -94,7 +86,6 @@ class Optimizer:
 
         """
 
-        self._output_dir = output_dir
         self._step_size = step_size
         self._target_bond_length = target_bond_length
         self._num_steps = num_steps
@@ -219,53 +210,6 @@ class Optimizer:
 
         return string
 
-    def _plot_progess(self, system_properties, output_dir):
-
-        fig, ax = plt.subplots(figsize=(8, 5))
-        ax.plot(
-            system_properties['steps'],
-            system_properties['max_bond_distance'],
-            c='k', lw=2
-        )
-        # Set number of ticks for x-axis
-        ax.tick_params(axis='both', which='major', labelsize=16)
-        ax.set_xlim(0, None)
-        ax.set_xlabel('step', fontsize=16)
-        ax.set_ylabel('max long bond length [angstrom]', fontsize=16)
-        ax.axhline(y=self._target_bond_length, c='r', linestyle='--')
-        fig.tight_layout()
-        fig.savefig(
-            os.path.join(output_dir, f'maxd_vs_step.pdf'),
-            dpi=360,
-            bbox_inches='tight'
-        )
-        plt.close()
-        # Plot energy vs timestep.
-        fig, ax = plt.subplots(figsize=(8, 5))
-        ax.plot(
-            system_properties['steps'],
-            system_properties['total_potential'],
-            c='k', lw=2, label='system potential'
-        )
-        ax.plot(
-            system_properties['steps'],
-            system_properties['nbond_potential'],
-            c='r', lw=2, label='nonbonded potential'
-        )
-        # Set number of ticks for x-axis
-        ax.tick_params(axis='both', which='major', labelsize=16)
-        ax.set_xlim(0, None)
-        ax.set_xlabel('step', fontsize=16)
-        ax.set_ylabel('potential', fontsize=16)
-        ax.legend(fontsize=16)
-        fig.tight_layout()
-        fig.savefig(
-            os.path.join(output_dir, f'pot_vs_step.pdf'),
-            dpi=360,
-            bbox_inches='tight'
-        )
-        plt.close()
-
     def get_subunits(self, mol, bond_pair_ids):
         """
         Get connected graphs based on mol separated by bonds.
@@ -309,24 +253,24 @@ class Optimizer:
 
         return subunits
 
-    def _run_optimization(
+    def _run_first_step(
         self,
         mol,
         bond_pair_ids,
         subunits,
-        output_dir,
-        f
     ):
 
-        begin_time = time.time()
+        step_result = StepResult(step=0, start_time=time.time())
 
-        f.write(self._output_top_lines())
-        f.write(f'There are {len(bond_pair_ids)} bonds to optimize.\n')
-        f.write(
+        step_result.update_log(self._output_top_lines())
+        step_result.update_log(
+            f'There are {len(bond_pair_ids)} bonds to optimize.\n'
+        )
+        step_result.update_log(
             f'There are {len(subunits)} sub units with N atoms:\n'
             f'{[len(subunits[i]) for i in subunits]}\n'
         )
-        f.write(
+        step_result.update_log(
             '====================================================\n'
             '                 Running optimisation!              \n'
             '====================================================\n\n'
@@ -339,157 +283,149 @@ class Optimizer:
             )
         )
 
-        # Write structures at each step to file.
-        mol.write_xyz_file(os.path.join(output_dir, f'coll_0.xyz'))
-
         # Update properties at each step.
-        system_properties = {
-            'steps': [0],
-            'passed': [],
-            'total_potential': [system_potential],
-            'nbond_potential': [nonbonded_potential],
-            'max_bond_distance': [max([
+        step_result.add_position_matrix(mol.get_position_matrix())
+        step_properties = {
+            'passed': None,
+            'total_potential': system_potential,
+            'nbond_potential': nonbonded_potential,
+            'max_bond_distance': max([
                 get_atom_distance(
                     position_matrix=mol.get_position_matrix(),
                     atom1_id=bond[0],
                     atom2_id=bond[1],
                 )
                 for bond in bond_pair_ids
-            ])],
+            ]),
         }
-        f.write(
+        step_result.add_properties(step_properties)
+        step_result.update_log(
             'step system_potential nonbond_potential max_dist '
             'opt_bbs updated?\n'
         )
-        f.write(
-            f"{system_properties['steps'][-1]} "
-            f"{system_properties['total_potential'][-1]} "
-            f"{system_properties['nbond_potential'][-1]} "
-            f"{system_properties['max_bond_distance'][-1]} "
+        step_result.update_log(
+            f"{0} "
+            f"{step_properties['total_potential']} "
+            f"{step_properties['nbond_potential']} "
+            f"{step_properties['max_bond_distance']} "
             '-- --\n'
         )
 
-        for step in range(1, self._num_steps):
-            position_matrix = mol.get_position_matrix()
+        return step_result
 
-            # Randomly select a bond to optimize from bonds.
-            bond_ids = random.choice(bond_pair_ids)
-            bond_vector = self._get_bond_vector(
-                position_matrix=position_matrix,
-                bond_pair=bond_ids
+    def _run_step(
+        self,
+        mol,
+        bond_pair_ids,
+        subunits,
+        step,
+        system_potential,
+        nonbonded_potential,
+    ):
+
+        step_result = StepResult(step=step, start_time=time.time())
+        position_matrix = mol.get_position_matrix()
+
+        # Randomly select a bond to optimize from bonds.
+        bond_ids = random.choice(bond_pair_ids)
+        bond_vector = self._get_bond_vector(
+            position_matrix=position_matrix,
+            bond_pair=bond_ids
+        )
+
+        # Get subunits connected by selected bonds.
+        subunit_1 = [
+            i for i in subunits if bond_ids[0] in subunits[i]
+        ][0]
+        subunit_2 = [
+            i for i in subunits if bond_ids[1] in subunits[i]
+        ][0]
+
+        # Choose subunit to move out of the two connected by the
+        # bond randomly.
+        moving_su = random.choice([subunit_1, subunit_2])
+        moving_su_atom_ids = tuple(i for i in subunits[moving_su])
+
+        # Random number from -1 to 1 for multiplying translation.
+        rand = (random.random() - 0.5) * 2
+        # Define translation along long bond vector where
+        # direction is from force, magnitude is randomly
+        # scaled.
+        bond_translation = -bond_vector * self._step_size * rand
+
+        # Define subunit COM vector to molecule COM.
+        cent = mol.get_centroid()
+        su_cent_vector = (
+            mol.get_centroid(atom_ids=moving_su_atom_ids)-cent
+        )
+        com_translation = su_cent_vector * self._step_size * rand
+
+        # Randomly choose between translation along long bond
+        # vector or along BB-COM vector.
+        translation_vector = random.choice([
+            bond_translation,
+            com_translation,
+        ])
+
+        # Translate building block.
+        # Update atom position of building block.
+        mol = self._translate_atoms_along_vector(
+            mol=mol,
+            atom_ids=moving_su_atom_ids,
+            vector=translation_vector,
+        )
+
+        new_system_potential, new_nonbonded_potential = (
+            self._compute_potential(
+                mol=mol,
+                bond_pair_ids=bond_pair_ids
             )
+        )
 
-            # Get subunits connected by selected bonds.
-            subunit_1 = [
-                i for i in subunits if bond_ids[0] in subunits[i]
-            ][0]
-            subunit_2 = [
-                i for i in subunits if bond_ids[1] in subunits[i]
-            ][0]
-
-            # Choose subunit to move out of the two connected by the
-            # bond randomly.
-            moving_su = random.choice([subunit_1, subunit_2])
-            moving_su_atom_ids = tuple(i for i in subunits[moving_su])
-
-            # Random number from -1 to 1 for multiplying translation.
-            rand = (random.random() - 0.5) * 2
-            # Define translation along long bond vector where
-            # direction is from force, magnitude is randomly
-            # scaled.
-            bond_translation = -bond_vector * self._step_size * rand
-
-            # Define subunit COM vector to molecule COM.
-            cent = mol.get_centroid()
-            su_cent_vector = (
-                mol.get_centroid(atom_ids=moving_su_atom_ids)-cent
-            )
-            com_translation = su_cent_vector * self._step_size * rand
-
-            # Randomly choose between translation along long bond
-            # vector or along BB-COM vector.
-            translation_vector = random.choice([
-                bond_translation,
-                com_translation,
-            ])
-
-            # Translate building block.
-            # Update atom position of building block.
+        if self._test_move(system_potential, new_system_potential):
+            updated = 'T'
+            passed = True
+            system_potential = new_system_potential
+            nonbonded_potential = new_nonbonded_potential
+        else:
+            updated = 'F'
+            passed = False
+            # Reverse move.
             mol = self._translate_atoms_along_vector(
                 mol=mol,
                 atom_ids=moving_su_atom_ids,
-                vector=translation_vector,
+                vector=-translation_vector,
             )
 
-            new_system_potential, new_nonbonded_potential = (
-                self._compute_potential(
-                    mol=mol,
-                    bond_pair_ids=bond_pair_ids
-                )
-            )
-
-            if self._test_move(system_potential, new_system_potential):
-                updated = 'T'
-                system_potential = new_system_potential
-                nonbonded_potential = new_nonbonded_potential
-                system_properties['passed'].append(step)
-            else:
-                updated = 'F'
-                # Reverse move.
-                mol = self._translate_atoms_along_vector(
-                    mol=mol,
-                    atom_ids=moving_su_atom_ids,
-                    vector=-translation_vector,
-                )
-
-            # Write structures at each step to file.
-            mol.write_xyz_file(
-                os.path.join(output_dir, f'coll_{step}.xyz')
-            )
-
-            # Update properties at each step.
-            system_properties['steps'].append(step)
-            system_properties['total_potential'].append(
-                system_potential
-            )
-            system_properties['nbond_potential'].append(
-                nonbonded_potential
-            )
-            system_properties['max_bond_distance'].append(max([
+        # Update properties at each step.
+        step_result.add_position_matrix(mol.get_position_matrix())
+        step_properties = {
+            'passed': passed,
+            'total_potential': system_potential,
+            'nbond_potential': nonbonded_potential,
+            'max_bond_distance': max([
                 get_atom_distance(
                     position_matrix=mol.get_position_matrix(),
                     atom1_id=bond[0],
                     atom2_id=bond[1],
                 )
                 for bond in bond_pair_ids
-            ]))
-            f.write(
-                f"{system_properties['steps'][-1]} "
-                f"{system_properties['total_potential'][-1]} "
-                f"{system_properties['nbond_potential'][-1]} "
-                f"{system_properties['max_bond_distance'][-1]} "
-                f'{bond_ids} {updated}\n'
-            )
-            step += 1
-
-        f.write('\n============================================\n')
-        f.write(
-            'Optimisation done:\n'
-            f"{len(system_properties['passed'])} steps passed: "
-            f"{100*(len(system_properties['passed'])/self._num_steps)}"
-            "%\n"
-            f'Total optimisation time: '
-            f'{round(time.time() - begin_time, 4)}s\n'
+            ]),
+        }
+        step_result.add_properties(step_properties)
+        step_result.update_log(
+            f"{step} "
+            f"{step_properties['total_potential']} "
+            f"{step_properties['nbond_potential']} "
+            f"{step_properties['max_bond_distance']} "
+            f'{bond_ids} {updated}\n'
         )
-        f.write('============================================\n')
 
-        self._plot_progess(system_properties, output_dir)
+        return step_result
 
-        return mol
-
-    def optimize(self, mol, bond_pair_ids, subunits):
+    def get_trajectory(self, mol, bond_pair_ids, subunits):
         """
-        Optimize `mol`.
+        Get trajectory of optimization run on `mol`.
 
         Parameters
         ----------
@@ -508,29 +444,112 @@ class Optimizer:
 
         Returns
         -------
-        mol : :class:`.Molecule`
-            The optimized molecule.
+        result : :class:`.Result`
+            The result of the optimization.
 
         """
 
-        # Handle output dir.
-        if self._output_dir is None:
-            output_dir = str(uuid.uuid4().int)
-        else:
-            output_dir = self._output_dir
-        output_dir = os.path.abspath(output_dir)
+        result = Result(start_time=time.time())
+        step_result = self._run_first_step(
+            mol,
+            bond_pair_ids,
+            subunits,
+        )
+        mol.update_position_matrix(
+            step_result.get_position_matrix()
+        )
+        system_potential = step_result.get_system_potential()
+        nonbonded_potential = step_result.get_nonbonded_potential()
+        result.add_step_result(step_result=step_result)
 
-        if os.path.exists(output_dir):
-            shutil.rmtree(output_dir)
-        os.mkdir(output_dir)
-
-        with open(os.path.join(output_dir, f'mch.out'), 'w') as f:
-            mol = self._run_optimization(
+        for step in range(1, self._num_steps):
+            step_result = self._run_step(
                 mol=mol,
                 bond_pair_ids=bond_pair_ids,
                 subunits=subunits,
-                output_dir=output_dir,
-                f=f
+                step=step,
+                system_potential=system_potential,
+                nonbonded_potential=nonbonded_potential,
             )
 
-        return mol
+            mol.update_position_matrix(
+                step_result.get_position_matrix()
+            )
+            system_potential = step_result.get_system_potential()
+            nonbonded_potential = step_result.get_nonbonded_potential()
+            result.add_step_result(step_result=step_result)
+
+        num_passed = result.get_number_passed()
+        result.update_log(
+            string=(
+                '\n============================================\n'
+                'Optimisation done:\n'
+                f'{num_passed} steps passed: '
+                f'{(num_passed/self._num_steps)*100}'
+                '%\n'
+                f'Total optimisation time: '
+                f'{round(result.get_timing(time.time()), 4)}s\n'
+                '============================================\n'
+            ),
+        )
+
+        return result
+
+    def get_result(self, mol, bond_pair_ids, subunits):
+        """
+        Get final result of optimization run on `mol`.
+
+        Parameters
+        ----------
+        mol : :class:`.Molecule`
+            The molecule to be optimized.
+
+        bond_pair_ids :
+            :class:`iterable` of :class:`tuple` of :class:`ints`
+            Iterable of pairs of atom ids with bond between them to
+            optimize.
+
+        subunits : :class:`.dict`
+            The subunits of `mol` split by bonds defined by
+            `bond_pair_ids`. Key is subunit identifier, Value is
+            :class:`iterable` of atom ids in subunit.
+
+        Returns
+        -------
+        result : :class:`.Result`
+            The result of the optimization.
+
+        """
+
+        result = Result(start_time=time.time())
+        step_result = self._run_first_step(
+            mol,
+            bond_pair_ids,
+            subunits,
+        )
+        mol.update_position_matrix(
+            step_result.get_position_matrix()
+        )
+        system_potential = step_result.get_system_potential()
+        nonbonded_potential = step_result.get_nonbonded_potential()
+
+        for step in range(1, self._num_steps):
+            step_result = self._run_step(
+                mol=mol,
+                bond_pair_ids=bond_pair_ids,
+                subunits=subunits,
+                step=step,
+                system_potential=system_potential,
+                nonbonded_potential=nonbonded_potential,
+            )
+
+            mol.update_position_matrix(
+                step_result.get_position_matrix()
+            )
+            system_potential = step_result.get_system_potential()
+            nonbonded_potential = step_result.get_nonbonded_potential()
+
+        # Only add final step.
+        result.add_step_result(step_result=step_result)
+
+        return result
