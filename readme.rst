@@ -94,9 +94,14 @@ In this example, we use *stk* for I/O only with the input file available in ``ex
         target_bond_length=1.2,
         num_steps=100,
     )
+    subunits = optimizer.get_subunits(
+        mol=mch_mol,
+        bond_pair_ids=((2, 3), (1, 5)),
+    )
     mch_mol = optimizer.optimize(
         mol=mch_mol,
         bond_pair_ids=((2, 3), (1, 5)),
+        subunits=subunits,
     )
 
     # Update stk molecule and write to file.
@@ -104,6 +109,10 @@ In this example, we use *stk* for I/O only with the input file available in ``ex
     benzene.write('benzene_opt.mol')
 
 
+Finally, we mention that the `Optimizer.get_subunits()` is based on splitting the `Molecule` by the input `bond_pair_ids`.
+This method is now public, so that users can modify the defined subunits to enforce rigid non-covalent interactions.
+I.e. non-covalent complexes will be distinct subunits because there is no bond between them, and the user can merge them into one subunit by merging the iterable of atom ids in the `subunits` dictionary, to force the algorithm to treat them as one rigid body.
+An example of this is given in ``examples/stk_example.py`` using an arbitrary non-covalent complex BuildingBlock.
 
 Contributors and Acknowledgements
 ---------------------------------

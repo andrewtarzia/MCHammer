@@ -34,9 +34,14 @@ optimizer = mch.Optimizer(
     target_bond_length=1.2,
     num_steps=100,
 )
+subunits = optimizer.get_subunits(
+    mol=mch_mol,
+    bond_pair_ids=((2, 3), (1, 5)),
+)
 mch_mol = optimizer.optimize(
     mol=mch_mol,
     bond_pair_ids=((2, 3), (1, 5)),
+    subunits=subunits,
 )
 benzene = benzene.with_position_matrix(mch_mol.get_position_matrix())
 benzene.write('benzene_opt.mol')
