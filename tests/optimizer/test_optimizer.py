@@ -71,7 +71,7 @@ def test_opt_test_move(o_optimizer):
 
 
 def test_opt_get_subunits(o_optimizer, o_molecule, o_subunits):
-    test = o_optimizer._get_subunits(
+    test = o_optimizer.get_subunits(
         o_molecule, bond_pair_ids=((0, 3), )
     )
     assert test == o_subunits
@@ -79,9 +79,13 @@ def test_opt_get_subunits(o_optimizer, o_molecule, o_subunits):
 
 def test_opt_optimize(o_optimizer, o_molecule):
     original_pos_mat = o_molecule.get_position_matrix()
+    subunits = o_optimizer.get_subunits(
+        o_molecule, bond_pair_ids=((0, 3), )
+    )
     new_molecule = o_optimizer.optimize(
         mol=o_molecule,
-        bond_pair_ids=((0, 3), )
+        bond_pair_ids=((0, 3), ),
+        subunits=subunits,
     )
     final_bond_length = np.linalg.norm(
         o_optimizer._get_bond_vector(
