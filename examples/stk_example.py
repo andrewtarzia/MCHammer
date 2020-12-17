@@ -114,7 +114,6 @@ mch_mol = mch.Molecule(
 mch_mol_nci = deepcopy(mch_mol)
 
 optimizer = mch.Optimizer(
-    output_dir='poc_mch',
     step_size=0.25,
     target_bond_length=1.2,
     num_steps=500,
@@ -123,7 +122,8 @@ subunits = optimizer.get_subunits(
     mol=mch_mol,
     bond_pair_ids=stk_long_bond_ids,
 )
-mch_mol = optimizer.optimize(
+# Just get final step.
+mch_result = optimizer.get_result(
     mol=mch_mol,
     bond_pair_ids=stk_long_bond_ids,
     subunits=subunits,
@@ -131,7 +131,6 @@ mch_mol = optimizer.optimize(
 
 
 optimizer = mch.Optimizer(
-    output_dir='poc_mch_nci',
     step_size=0.25,
     target_bond_length=1.2,
     num_steps=500,
@@ -140,14 +139,20 @@ subunits = optimizer.get_subunits(
     mol=mch_mol_nci,
     bond_pair_ids=stk_long_bond_ids,
 )
-mch_mol_nci = optimizer.optimize(
+# Just get final step.
+mch_result_nci = optimizer.get_result(
     mol=mch_mol_nci,
     bond_pair_ids=stk_long_bond_ids,
     # Can merge subunits to match distinct BuildingBlocks in stk
     # ConstructedMolecule.
     subunits=merge_subunits_by_buildingblockid(cage, subunits),
 )
-cage = cage.with_position_matrix(mch_mol.get_position_matrix())
+
+cage = cage.with_position_matrix(
+    mch_result.get_final_position_matrix()
+)
 cage.write('poc_opt.mol')
-cage = cage.with_position_matrix(mch_mol_nci.get_position_matrix())
+cage = cage.with_position_matrix(
+    mch_result_nci.get_final_position_matrix()
+)
 cage.write('poc_opt_nci.mol')
