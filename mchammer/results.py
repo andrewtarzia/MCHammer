@@ -16,17 +16,18 @@ class StepResult:
 
     """
 
-    def __init__(self, step, start_time):
+    def __init__(self, step):
         """
         Initialize a :class:`StepResult` instance.
 
         Parameters
         ----------
+        step : :class:`int`
+            Step number.
 
         """
 
         self._step = step
-        self._start_time = start_time
         self._log = ''
 
     def get_step(self):
@@ -35,26 +36,43 @@ class StepResult:
     def get_log(self):
         return self._log
 
-    def get_properties(self):
-        return self._properties
+    def set_position_matrix(self, position_matrix):
+        self._position_matrix = position_matrix
+
+    def set_passed(self, passed):
+        self._passed = passed
+
+    def set_system_potential(self, system_potential):
+        self._system_potential = system_potential
+
+    def set_nonbonded_potential(self, nonbonded_potential):
+        self._nonbonded_potential = nonbonded_potential
+
+    def set_max_bond_distance(self, max_bond_distance):
+        self._max_bond_distance = max_bond_distance
 
     def get_position_matrix(self):
         return self._position_matrix
 
+    def get_passed(self):
+        return self._passed
+
     def get_system_potential(self):
-        return self._properties['total_potential']
+        return self._system_potential
 
     def get_nonbonded_potential(self):
-        return self._properties['nbond_potential']
+        return self._nonbonded_potential
 
     def get_max_bond_distance(self):
-        return self._properties['max_bond_distance']
+        return self._max_bond_distance
 
-    def add_position_matrix(self, position_matrix):
-        self._position_matrix = position_matrix
-
-    def add_properties(self, step_properties):
-        self._properties = step_properties
+    def get_properties(self):
+        return {
+            'max_bond_distance': self._max_bond_distance,
+            'system_potential': self._system_potential,
+            'nonbonded_potential': self._nonbonded_potential,
+            'passed': self._passed,
+        }
 
     def update_log(self, string):
         """
@@ -76,6 +94,8 @@ class Result:
 
         Parameters
         ----------
+        start_time : :class:`time.time()`
+            Start of run timing.
 
         """
 
@@ -115,7 +135,7 @@ class Result:
         """
         return len([
             1 for step in self._step_results
-            if self._step_results[step].get_properties()['passed']
+            if self._step_results[step].get_passed()
         ])
 
     def get_final_position_matrix(self):
@@ -134,6 +154,13 @@ class Result:
 
         """
         return time - self._start_time
+
+    def get_step_count(self):
+        """
+        Get step count.
+
+        """
+        return self._step_count
 
     def get_steps_properties(self):
         """

@@ -70,8 +70,8 @@ data = {
 for step, prop in mch_result.get_steps_properties():
     data['steps'].append(step)
     data['max_bond_distances'].append(prop['max_bond_distance'])
-    data['system_potentials'].append(prop['total_potential'])
-    data['nonbonded_potentials'].append(prop['nbond_potential'])
+    data['system_potentials'].append(prop['system_potential'])
+    data['nonbonded_potentials'].append(prop['nonbonded_potential'])
 
 # Show plotting from results to viauslise progress.
 fig, ax = plt.subplots(figsize=(8, 5))

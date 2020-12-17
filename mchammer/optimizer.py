@@ -260,7 +260,7 @@ class Optimizer:
         subunits,
     ):
 
-        step_result = StepResult(step=0, start_time=time.time())
+        step_result = StepResult(step=0)
 
         step_result.update_log(self._output_top_lines())
         step_result.update_log(
@@ -284,30 +284,27 @@ class Optimizer:
         )
 
         # Update properties at each step.
-        step_result.add_position_matrix(mol.get_position_matrix())
-        step_properties = {
-            'passed': None,
-            'total_potential': system_potential,
-            'nbond_potential': nonbonded_potential,
-            'max_bond_distance': max([
-                get_atom_distance(
-                    position_matrix=mol.get_position_matrix(),
-                    atom1_id=bond[0],
-                    atom2_id=bond[1],
-                )
-                for bond in bond_pair_ids
-            ]),
-        }
-        step_result.add_properties(step_properties)
+        step_result.set_position_matrix(mol.get_position_matrix())
+        step_result.set_passed(None)
+        step_result.set_system_potential(system_potential)
+        step_result.set_nonbonded_potential(nonbonded_potential)
+        step_result.set_max_bond_distance(max([
+            get_atom_distance(
+                position_matrix=mol.get_position_matrix(),
+                atom1_id=bond[0],
+                atom2_id=bond[1],
+            )
+            for bond in bond_pair_ids
+        ]))
         step_result.update_log(
             'step system_potential nonbond_potential max_dist '
             'opt_bbs updated?\n'
         )
         step_result.update_log(
             f"{0} "
-            f"{step_properties['total_potential']} "
-            f"{step_properties['nbond_potential']} "
-            f"{step_properties['max_bond_distance']} "
+            f"{step_result.get_system_potential()} "
+            f"{step_result.get_nonbonded_potential()} "
+            f"{step_result.get_max_bond_distance()} "
             '-- --\n'
         )
 
@@ -323,7 +320,7 @@ class Optimizer:
         nonbonded_potential,
     ):
 
-        step_result = StepResult(step=step, start_time=time.time())
+        step_result = StepResult(step=step)
         position_matrix = mol.get_position_matrix()
 
         # Randomly select a bond to optimize from bonds.
@@ -398,26 +395,24 @@ class Optimizer:
             )
 
         # Update properties at each step.
-        step_result.add_position_matrix(mol.get_position_matrix())
-        step_properties = {
-            'passed': passed,
-            'total_potential': system_potential,
-            'nbond_potential': nonbonded_potential,
-            'max_bond_distance': max([
-                get_atom_distance(
-                    position_matrix=mol.get_position_matrix(),
-                    atom1_id=bond[0],
-                    atom2_id=bond[1],
-                )
-                for bond in bond_pair_ids
-            ]),
-        }
-        step_result.add_properties(step_properties)
+        step_result.set_position_matrix(mol.get_position_matrix())
+        step_result.set_passed(passed)
+        step_result.set_system_potential(system_potential)
+        step_result.set_nonbonded_potential(nonbonded_potential)
+        step_result.set_max_bond_distance(max([
+            get_atom_distance(
+                position_matrix=mol.get_position_matrix(),
+                atom1_id=bond[0],
+                atom2_id=bond[1],
+            )
+            for bond in bond_pair_ids
+        ]))
+
         step_result.update_log(
             f"{step} "
-            f"{step_properties['total_potential']} "
-            f"{step_properties['nbond_potential']} "
-            f"{step_properties['max_bond_distance']} "
+            f"{step_result.get_system_potential()} "
+            f"{step_result.get_nonbonded_potential()} "
+            f"{step_result.get_max_bond_distance()} "
             f'{bond_ids} {updated}\n'
         )
 
