@@ -118,6 +118,7 @@ An example of this is given in ``examples/stk_example.py`` using an arbitrary no
 
 As part of this code, I also provide the `Collapser` class, which is a naive precursor to MCHammer that simply moves all subunits toward the molecule centre of mass until a distance threshold is met.
 This can sometimes be faster than MCHammer for some molecule types.
+An example of this is shown in ``examples/collapser_example.py``.
 
 Contributors and Acknowledgements
 ---------------------------------
