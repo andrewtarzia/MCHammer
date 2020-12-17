@@ -1,22 +1,7 @@
 import pytest
 import numpy as np
-import os
 import mchammer as mch
 
-
-# @pytest.fixture
-# def benzene_build():
-#     """
-#     Benzene fixture with distorted geometry.
-#
-#     """
-#
-#     path_tcurrent_file = os.path.realpath(__file__)
-#     current_directory = os.path.split(path_tcurrent_file)[0]
-#     benzene = os.path.join(current_directory, "benzene.mol")
-#     mol = stk.BuildingBlock.init_from_file(benzene)
-#
-#     return mol
 
 @pytest.fixture(
     params=(
@@ -26,7 +11,6 @@ import mchammer as mch
     )
 )
 def atom_info(request):
-
     return request.param
 
 
@@ -39,7 +23,6 @@ def atom_info(request):
     )
 )
 def bond_info(request):
-
     return request.param
 
 
@@ -149,4 +132,113 @@ def optimizer():
         step_size=0.1,
         target_bond_length=2.0,
         num_steps=100
+    )
+
+
+@pytest.fixture
+def coll_atoms():
+    return [
+        mch.Atom(0, 'C'), mch.Atom(1, 'C'), mch.Atom(2, 'C'),
+        mch.Atom(3, 'C'), mch.Atom(4, 'C'), mch.Atom(5, 'C'),
+    ]
+
+
+@pytest.fixture
+def coll_bonds():
+    return [
+        mch.Bond(0, 0, 1), mch.Bond(1, 0, 2), mch.Bond(2, 0, 3),
+        mch.Bond(3, 3, 4), mch.Bond(4, 3, 5)
+    ]
+
+
+@pytest.fixture
+def coll_position_matrix():
+    return np.array([
+        [0, 1, 0],
+        [1, 1, 0],
+        [-1, 1, 0],
+        [0, 10, 0],
+        [1, 10, 0],
+        [-1, 10, 0],
+    ])
+
+
+@pytest.fixture
+def coll_vectors(request):
+    return {0: np.array([2, -1.5, 0]), 1: np.array([0, 2.5, 0])}
+
+
+@pytest.fixture
+def coll_su_dists(request):
+    return [
+        9, 9.055385138137417, 9.055385138137417, 9.055385138137417,
+        9, 9.219544457292887, 9.055385138137417, 9.219544457292887,
+        9,
+    ]
+
+
+@pytest.fixture
+def coll_scales(request):
+    return {0: 0.2, 1: 1.0}
+
+
+@pytest.fixture
+def coll_step(request):
+    return 1.5
+
+
+@pytest.fixture
+def coll_position_matrix2():
+    return np.array([
+        [0, 1, 0],
+        [0, 1, 0],
+        [-1, 1, 0],
+        [0, 6, 0],
+        [1, 6, 0],
+        [-1, 6, 0],
+    ])
+
+
+@pytest.fixture
+def su_vectors(request):
+    return {0: np.array([0, -4.5, 0]), 1: np.array([0, 4.5, 0])}
+
+
+@pytest.fixture
+def su_scales(request):
+    return {0: 1.0, 1: 1.0}
+
+
+@pytest.fixture
+def coll_molecule(coll_atoms, coll_bonds, coll_position_matrix):
+    return mch.Molecule(
+        atoms=coll_atoms,
+        bonds=coll_bonds,
+        position_matrix=coll_position_matrix
+    )
+
+
+@pytest.fixture
+def coll_subunits():
+    return {0: {0, 1, 2}, 1: {3, 4, 5}}
+
+
+@pytest.fixture
+def coll_final_position_matrix():
+    return np.array([
+        [0., 4.75262477, 0.],
+        [1., 4.75262477, 0.],
+        [-1., 4.75262477, 0.],
+        [0., 6.24737523, 0.],
+        [1., 6.24737523, 0.],
+        [-1., 6.24737523, 0.],
+    ])
+
+
+@pytest.fixture
+def collapser():
+    return mch.Collapser(
+        step_size=0.05,
+        distance_threshold=1.5,
+        scale_steps=True,
     )
