@@ -77,19 +77,23 @@ def test_opt_get_subunits(o_optimizer, o_molecule, o_subunits):
     assert test == o_subunits
 
 
-def test_opt_optimize(o_optimizer, o_molecule):
+def test_opt_get_result(o_optimizer, o_molecule):
     original_pos_mat = o_molecule.get_position_matrix()
     subunits = o_optimizer.get_subunits(
         o_molecule, bond_pair_ids=((0, 3), )
     )
-    new_molecule = o_optimizer.optimize(
+    results = o_optimizer.get_result(
         mol=o_molecule,
         bond_pair_ids=((0, 3), ),
         subunits=subunits,
     )
+
+    assert results.get_step_count() == 99
+    assert len(tuple(results.get_steps_properties())) == 1
+
     final_bond_length = np.linalg.norm(
         o_optimizer._get_bond_vector(
-            position_matrix=new_molecule.get_position_matrix(),
+            position_matrix=results.get_final_position_matrix(),
             bond_pair=(0, 3),
         ),
     )
@@ -101,7 +105,47 @@ def test_opt_optimize(o_optimizer, o_molecule):
     for bond in o_molecule.get_bonds():
         if (bond.get_atom1_id(), bond.get_atom2_id()) != (0, 3):
             test = get_atom_distance(
-                position_matrix=new_molecule.get_position_matrix(),
+                position_matrix=results.get_final_position_matrix(),
+                atom1_id=bond.get_atom1_id(),
+                atom2_id=bond.get_atom2_id(),
+            )
+            bond_length = get_atom_distance(
+                position_matrix=original_pos_mat,
+                atom1_id=bond.get_atom1_id(),
+                atom2_id=bond.get_atom2_id(),
+            )
+            assert np.isclose(test, bond_length, atol=1E-6)
+
+
+def test_opt_get_trajectory(o_optimizer, o_molecule):
+    original_pos_mat = o_molecule.get_position_matrix()
+    subunits = o_optimizer.get_subunits(
+        o_molecule, bond_pair_ids=((0, 3), )
+    )
+    results = o_optimizer.get_trajectory(
+        mol=o_molecule,
+        bond_pair_ids=((0, 3), ),
+        subunits=subunits,
+    )
+
+    assert results.get_step_count() == 99
+    assert len(tuple(results.get_steps_properties())) == 100
+
+    final_bond_length = np.linalg.norm(
+        o_optimizer._get_bond_vector(
+            position_matrix=results.get_final_position_matrix(),
+            bond_pair=(0, 3),
+        ),
+    )
+    # Give it some wiggle room.
+    assert 1.5 < final_bond_length
+    assert final_bond_length < 2.5
+
+    # Test all other bond lengths are equivalent.
+    for bond in o_molecule.get_bonds():
+        if (bond.get_atom1_id(), bond.get_atom2_id()) != (0, 3):
+            test = get_atom_distance(
+                position_matrix=results.get_final_position_matrix(),
                 atom1_id=bond.get_atom1_id(),
                 atom2_id=bond.get_atom2_id(),
             )

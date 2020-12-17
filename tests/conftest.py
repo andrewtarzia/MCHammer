@@ -171,7 +171,6 @@ def o_position_matrix2():
 @pytest.fixture
 def o_optimizer():
     return mch.Optimizer(
-        output_dir=os.path.join(os.getcwd(), 'test_opt_output'),
         step_size=0.1,
         target_bond_length=2.0,
         num_steps=100
