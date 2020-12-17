@@ -12,7 +12,6 @@ import numpy as np
 import time
 
 from itertools import combinations, product
-import random
 
 from .results import Result, StepResult
 from .utilities import get_atom_distance
@@ -120,9 +119,9 @@ class Collapser:
 
         return new_position_matrix
 
-    def _get_bb_vectors(self, mol, subunits):
+    def _get_subunit_vectors(self, mol, subunits):
         """
-        Get the building block to COM vectors.
+        Get the subunit to COM vectors.
 
         Parameters
         ----------
@@ -153,14 +152,14 @@ class Collapser:
 
         centroid = mol.get_centroid()
 
-        # Get bb COM vector to molecule COM.
+        # Get subunit centroid to molecule centroid vector.
         su_cent_vectors = {
             i: mol.get_centroid(atom_ids=subunits[i])-centroid
             for i in subunits
         }
 
         # Scale the step size based on the different distances of
-        # bbs from the COM. Impacts anisotropic topologies.
+        # subunits from the COM. Impacts anisotropic topologies.
         if self._scale_steps:
             norms = {
                 i: np.linalg.norm(su_cent_vectors[i])
@@ -191,7 +190,7 @@ class Collapser:
         step_result = StepResult(step=step)
 
         # Get the subunit to centroid vectors and their relative scale.
-        su_cent_vectors, su_cent_scales = self._get_bb_vectors(
+        su_cent_vectors, su_cent_scales = self._get_subunit_vectors(
             mol=mol,
             subunits=subunits
         )
@@ -297,7 +296,7 @@ class Collapser:
         result.update_log(
             '====================================================\n'
             f"Steps run: {step}\n"
-            f"Minimum inter-bb distance: {min_dist}\n"
+            f"Minimum inter-subunit distance: {min_dist}\n"
             '====================================================\n'
         )
 

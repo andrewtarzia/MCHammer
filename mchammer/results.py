@@ -29,6 +29,10 @@ class StepResult:
 
         self._step = step
         self._log = ''
+        self._max_bond_distance = None
+        self._system_potential = None
+        self._nonbonded_potential = None
+        self._passed = None
 
     def get_step(self):
         return self._step
