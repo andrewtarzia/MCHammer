@@ -19,7 +19,7 @@ from .utilities import get_atom_distance
 
 class Collapser:
     """
-    Slowly moves rigid-subunits toward center of mass of molecule.
+    Moves rigid-subunits toward center of mass of molecule.
 
     """
 

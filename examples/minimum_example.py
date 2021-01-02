@@ -39,6 +39,7 @@ optimizer = mch.Optimizer(
 subunits = mch_mol.get_subunits(
     bond_pair_ids=((2, 3), (1, 5)),
 )
+# Get all steps.
 mch_result = optimizer.get_trajectory(
     mol=mch_mol,
     bond_pair_ids=((2, 3), (1, 5)),

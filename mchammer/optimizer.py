@@ -40,7 +40,7 @@ class Optimizer:
         random_seed=1000,
     ):
         """
-        Initialize a :class:`Collapser` instance.
+        Initialize a :class:`Optimizer` instance.
 
         Parameters
         ----------
