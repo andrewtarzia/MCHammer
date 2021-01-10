@@ -1,4 +1,5 @@
 from copy import deepcopy
+from collections import defaultdict
 import stk
 import mchammer as mch
 
@@ -18,6 +19,28 @@ def get_long_bond_ids(mol):
             long_bond_ids.append(ids)
 
     return tuple(long_bond_ids)
+
+
+def get_subunits(mol):
+    """
+    Get connected graphs based on building block ids.
+
+    Returns
+    -------
+    subunits : :class:`.dict`
+        The subunits of `mol` split by building block id. Key is
+        subunit identifier, Value is :class:`iterable` of atom ids in
+        subunit.
+
+    """
+
+    subunits = defaultdict(list)
+    for atom_info in mol.get_atom_infos():
+        subunits[atom_info.get_building_block_id()].append(
+            atom_info.get_atom().get_id()
+        )
+
+    return subunits
 
 
 # Building a cage from the examples on the stk docs.
@@ -93,7 +116,7 @@ optimizer = mch.Optimizer(
     target_bond_length=1.2,
     num_steps=500,
 )
-subunits = get_bbid_subunits(mol=cage)
+subunits = get_subunits(mol=cage)
 # Just get final step.
 mch_mol_nci, mch_result_nci = optimizer.get_result(
     mol=mch_mol_nci,
@@ -102,12 +125,8 @@ mch_mol_nci, mch_result_nci = optimizer.get_result(
     # ConstructedMolecule.
     subunits=subunits,
 )
-
-cage = cage.with_position_matrix(
-    mch_result.get_final_position_matrix()
-)
+print(mch_result_nci)
+cage = cage.with_position_matrix(mch_mol.get_position_matrix())
 cage.write('poc_opt.mol')
-cage = cage.with_position_matrix(
-    mch_result_nci.get_final_position_matrix()
-)
+cage = cage.with_position_matrix(mch_mol_nci.get_position_matrix())
 cage.write('poc_opt_nci.mol')

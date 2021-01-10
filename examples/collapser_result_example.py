@@ -1,5 +1,4 @@
 import stk
-import os
 from collections import defaultdict
 import mchammer as mch
 
@@ -101,24 +100,14 @@ optimizer = mch.Collapser(
     scale_steps=True,
 )
 subunits = get_subunits(mol=cage)
-# Get all steps.
-mch_mol, mch_result = optimizer.get_trajectory(
+# Iterate over steps.
+mch_mol, mch_result = optimizer.get_result(
     mol=mch_mol,
     bond_pair_ids=stk_long_bond_ids,
     subunits=subunits,
 )
 
 cage = cage.with_position_matrix(
-    mch_result.get_final_position_matrix()
+    mch_mol.get_position_matrix()
 )
-cage.write('coll_poc_opt.mol')
-
-with open('coll_opt.out', 'w') as f:
-    f.write(mch_result.get_log())
-
-# Output trajectory as separate xyz files for visualisation.
-if not os.path.exists('coll_poc_traj'):
-    os.mkdir('coll_poc_traj')
-for step, new_pos_mat in mch_result.get_trajectory():
-    new_mol = mch_mol.with_position_matrix(new_pos_mat)
-    new_mol.write_xyz_file(f'coll_poc_traj/traj_{step}.xyz')
+cage.write('coll_res_poc_opt.mol')

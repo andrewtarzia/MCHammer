@@ -11,7 +11,6 @@ benzene_atoms = [
 ]
 benzene_bonds = []
 for i, bond in enumerate(benzene.get_bonds()):
-    # Must ensure that bond atom ids are ordered by atom id.
     b_ids = (bond.get_atom1().get_id(), bond.get_atom2().get_id())
     benzene_bonds.append((i, b_ids))
 
@@ -41,9 +40,7 @@ mch_mol, mch_result = optimizer.get_trajectory(
     bond_pair_ids=((2, 3), (1, 5)),
     subunits=subunits,
 )
-benzene = benzene.with_position_matrix(
-    mch_result.get_final_position_matrix()
-)
+benzene = benzene.with_position_matrix(mch_mol.get_position_matrix())
 benzene.write('benzene_opt.mol')
 
 with open('benzene_opt.out', 'w') as f:

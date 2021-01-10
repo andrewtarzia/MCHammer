@@ -72,20 +72,16 @@ In this example, we use *stk* for I/O only with the input file available in ``ex
     ]
     benzene_bonds = []
     for i, bond in enumerate(benzene.get_bonds()):
-        # Must ensure that bond atom ids are ordered by atom id.
-        b_ids = (
-            (bond.get_atom1().get_id(), bond.get_atom2().get_id())
-            if bond.get_atom1().get_id() < bond.get_atom2().get_id()
-            else (bond.get_atom2().get_id(), bond.get_atom1().get_id())
-        )
+        b_ids = (bond.get_atom1().get_id(), bond.get_atom2().get_id())
         benzene_bonds.append((i, b_ids))
 
     mch_mol = mch.Molecule(
         atoms=(
-            mch.Atom(id=i[0], element_string=i[1]) for i in benzene_atoms
+            mch.Atom(id=i[0], element_string=i[1])
+            for i in benzene_atoms
         ),
         bonds=(
-            mch.Bond(id=i[0], atom1_id=i[1][0], atom2_id=i[1][1])
+            mch.Bond(id=i[0], atom_ids=i[1])
             for i in benzene_bonds
         ),
         position_matrix=benzene.get_position_matrix(),
@@ -100,13 +96,15 @@ In this example, we use *stk* for I/O only with the input file available in ``ex
     subunits = mch_mol.get_subunits(
         bond_pair_ids=((2, 3), (1, 5)),
     )
-    mch_result = optimizer.get_trajectory(
+    # Get all steps.
+    mch_mol, mch_result = optimizer.get_trajectory(
         mol=mch_mol,
         bond_pair_ids=((2, 3), (1, 5)),
         subunits=subunits,
     )
+    # Update stk Molecule with new position matrix.
     benzene = benzene.with_position_matrix(
-        mch_result.get_final_position_matrix()
+        mch_mol.get_position_matrix()
     )
     benzene.write('benzene_opt.mol')
 
