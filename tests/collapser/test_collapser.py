@@ -69,9 +69,6 @@ def test_c_get_result(
         subunits=subunits,
     )
 
-    assert results.get_step_count() == 35
-    assert len(tuple(results.get_steps_properties())) == 1
-
     final_min_distance = min(
         dist for dist in collapser._get_subunit_distances(
             test_mol, subunits
@@ -91,7 +88,7 @@ def test_c_get_result(
     for bond in coll_molecule.get_bonds():
         if (bond.get_atom1_id(), bond.get_atom2_id()) != (0, 3):
             test = get_atom_distance(
-                position_matrix=results.get_final_position_matrix(),
+                position_matrix=results.get_position_matrix(),
                 atom1_id=bond.get_atom1_id(),
                 atom2_id=bond.get_atom2_id(),
             )
@@ -117,7 +114,6 @@ def test_c_get_trajectory(
         results.get_final_position_matrix()
     )
     assert results.get_step_count() == 35
-    assert len(tuple(results.get_steps_properties())) == 35
 
     final_min_distance = min(
         dist for dist in collapser._get_subunit_distances(

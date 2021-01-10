@@ -81,12 +81,9 @@ def test_opt_get_result(optimizer, molecule):
         subunits=subunits,
     )
 
-    assert results.get_step_count() == 99
-    assert len(tuple(results.get_steps_properties())) == 1
-
     final_bond_length = np.linalg.norm(
         optimizer._get_bond_vector(
-            position_matrix=results.get_final_position_matrix(),
+            position_matrix=results.get_position_matrix(),
             bond_pair=(0, 3),
         ),
     )
@@ -98,7 +95,7 @@ def test_opt_get_result(optimizer, molecule):
     for bond in molecule.get_bonds():
         if (bond.get_atom1_id(), bond.get_atom2_id()) != (0, 3):
             test = get_atom_distance(
-                position_matrix=results.get_final_position_matrix(),
+                position_matrix=results.get_position_matrix(),
                 atom1_id=bond.get_atom1_id(),
                 atom2_id=bond.get_atom2_id(),
             )
