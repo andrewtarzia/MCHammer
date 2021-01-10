@@ -9,9 +9,9 @@ def test_c_get_subunit_distances(
     coll_su_dists,
     coll_position_matrix,
 ):
-    coll_molecule.update_position_matrix(coll_position_matrix)
+    test = coll_molecule.with_position_matrix(coll_position_matrix)
     for i, dist in enumerate(collapser._get_subunit_distances(
-        mol=coll_molecule,
+        mol=test,
         subunits=coll_subunits,
     )):
         print(i)
@@ -28,9 +28,9 @@ def test_c_get_new_position_matrix(
     coll_vectors,
     coll_scales,
 ):
-    coll_molecule.update_position_matrix(coll_position_matrix)
+    test_mol = coll_molecule.with_position_matrix(coll_position_matrix)
     test_pos_mat = collapser._get_new_position_matrix(
-        mol=coll_molecule,
+        mol=test_mol,
         subunits=coll_subunits,
         step_size=coll_step,
         vectors=coll_vectors,
@@ -63,7 +63,7 @@ def test_c_get_result(
 ):
     original_pos_mat = coll_molecule.get_position_matrix()
     subunits = coll_molecule.get_subunits(bond_pair_ids=((0, 3), ))
-    results = collapser.get_result(
+    test_mol, results = collapser.get_result(
         mol=coll_molecule,
         bond_pair_ids=((0, 3), ),
         subunits=subunits,
@@ -74,14 +74,14 @@ def test_c_get_result(
 
     final_min_distance = min(
         dist for dist in collapser._get_subunit_distances(
-            coll_molecule, subunits
+            test_mol, subunits
         )
     )
     # Give it some wiggle room.
     assert np.isclose(1.4947505, final_min_distance, atol=1E-8)
 
     # Check position matrix because this code is deterministic.
-    test_pos_mat = coll_molecule.get_position_matrix()
+    test_pos_mat = test_mol.get_position_matrix()
     for i in range(len(coll_final_position_matrix)):
         test = test_pos_mat[i]
         given = coll_final_position_matrix[i]
@@ -108,12 +108,12 @@ def test_c_get_trajectory(
 ):
     original_pos_mat = coll_molecule.get_position_matrix()
     subunits = coll_molecule.get_subunits(bond_pair_ids=((0, 3), ))
-    results = collapser.get_trajectory(
+    test_mol, results = collapser.get_trajectory(
         mol=coll_molecule,
         bond_pair_ids=((0, 3), ),
         subunits=subunits,
     )
-    coll_molecule.update_position_matrix(
+    test_mol = coll_molecule.with_position_matrix(
         results.get_final_position_matrix()
     )
     assert results.get_step_count() == 35
@@ -121,14 +121,14 @@ def test_c_get_trajectory(
 
     final_min_distance = min(
         dist for dist in collapser._get_subunit_distances(
-            coll_molecule, subunits
+            test_mol, subunits
         )
     )
     # Give it some wiggle room.
     assert np.isclose(1.4947505, final_min_distance, atol=1E-8)
 
     # Check position matrix because this code is deterministic.
-    test_pos_mat = coll_molecule.get_position_matrix()
+    test_pos_mat = test_mol.get_position_matrix()
     for i in range(len(coll_final_position_matrix)):
         test = test_pos_mat[i]
         given = coll_final_position_matrix[i]

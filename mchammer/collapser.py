@@ -202,7 +202,7 @@ class Collapser:
             scales=su_cent_scales,
             step_size=step_size,
         )
-        mol.update_position_matrix(new_position_matrix)
+        mol = mol.with_position_matrix(new_position_matrix)
         # Update properties at each step.
         step_result.set_position_matrix(mol.get_position_matrix())
         step_result.set_max_bond_distance(max([
@@ -217,7 +217,7 @@ class Collapser:
             f"{step} {step_result.get_max_bond_distance()}\n"
         )
 
-        return step_result
+        return mol, step_result
 
     def get_trajectory(self, mol, bond_pair_ids, subunits):
         """
@@ -240,6 +240,8 @@ class Collapser:
 
         Returns
         -------
+        mol :
+
         result : :class:`.Result`
             The result of the optimization.
 
@@ -270,7 +272,7 @@ class Collapser:
         step = 0
         while not self._has_short_contacts(mol, subunits):
             step += 1
-            step_result = self._run_step(
+            mol, step_result = self._run_step(
                 mol=mol,
                 bond_pair_ids=bond_pair_ids,
                 subunits=subunits,
@@ -284,7 +286,7 @@ class Collapser:
         )
         if min_dist < self._distance_threshold / 2:
             step += 1
-            step_result = self._run_step(
+            mol, step_result = self._run_step(
                 mol=mol,
                 bond_pair_ids=bond_pair_ids,
                 subunits=subunits,
@@ -300,7 +302,7 @@ class Collapser:
             '====================================================\n'
         )
 
-        return result
+        return mol, result
 
     def get_result(self, mol, bond_pair_ids, subunits):
         """
@@ -323,6 +325,8 @@ class Collapser:
 
         Returns
         -------
+        mol :
+
         result : :class:`.Result`
             The result of the optimization.
 
@@ -333,7 +337,7 @@ class Collapser:
         step = 0
         while not self._has_short_contacts(mol, subunits):
             step += 1
-            step_result = self._run_step(
+            mol, step_result = self._run_step(
                 mol=mol,
                 bond_pair_ids=bond_pair_ids,
                 subunits=subunits,
@@ -346,7 +350,7 @@ class Collapser:
         )
         if min_dist < self._distance_threshold / 2:
             step += 1
-            step_result = self._run_step(
+            mol, step_result = self._run_step(
                 mol=mol,
                 bond_pair_ids=bond_pair_ids,
                 subunits=subunits,
@@ -355,4 +359,4 @@ class Collapser:
             )
         result.add_step_result(step_result=step_result)
 
-        return result
+        return mol, result

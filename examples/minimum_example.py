@@ -36,7 +36,7 @@ subunits = mch_mol.get_subunits(
     bond_pair_ids=((2, 3), (1, 5)),
 )
 # Get all steps.
-mch_result = optimizer.get_trajectory(
+mch_mol, mch_result = optimizer.get_trajectory(
     mol=mch_mol,
     bond_pair_ids=((2, 3), (1, 5)),
     subunits=subunits,
@@ -53,8 +53,8 @@ with open('benzene_opt.out', 'w') as f:
 if not os.path.exists('benzene_traj'):
     os.mkdir('benzene_traj')
 for step, new_pos_mat in mch_result.get_trajectory():
-    mch_mol.update_position_matrix(new_pos_mat)
-    mch_mol.write_xyz_file(f'benzene_traj/traj_{step}.xyz')
+    new_mol = mch_mol.with_position_matrix(new_pos_mat)
+    new_mol.write_xyz_file(f'benzene_traj/traj_{step}.xyz')
 
 # Plot properties for parameterisation.
 data = {

@@ -57,9 +57,9 @@ class Molecule:
 
         return np.array(self._position_matrix.T)
 
-    def update_position_matrix(self, position_matrix):
+    def with_position_matrix(self, position_matrix):
         """
-        Update position matrix attribute.
+        Return clone Molecule with new position matrix.
 
         Parameters
         ----------
@@ -69,7 +69,14 @@ class Molecule:
 
         """
 
-        self._position_matrix = np.array(position_matrix.T)
+        clone = self.__class__.__new__(self.__class__)
+        Molecule.__init__(
+            self=clone,
+            atoms=self._atoms,
+            bonds=self._bonds,
+            position_matrix=np.array(position_matrix),
+        )
+        return clone
 
     def _write_xyz_content(self):
         """

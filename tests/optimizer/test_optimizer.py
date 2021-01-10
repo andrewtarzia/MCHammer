@@ -45,6 +45,7 @@ def test_opt_compute_potential(
 def test_opt_translate_atoms_along_vector(
     optimizer, molecule, position_matrix, position_matrix3
 ):
+    molecule = molecule.with_position_matrix(position_matrix)
     new_molecule = optimizer._translate_atoms_along_vector(
         mol=molecule,
         atom_ids=(3, 4, 5),
@@ -55,10 +56,11 @@ def test_opt_translate_atoms_along_vector(
         new_molecule.get_position_matrix(),
     ))
     new_molecule = optimizer._translate_atoms_along_vector(
-        mol=molecule,
+        mol=new_molecule,
         atom_ids=(3, 4, 5),
         vector=np.array([0, -5, 0])
     )
+    print(position_matrix, new_molecule.get_position_matrix())
     assert np.all(np.equal(
         position_matrix,
         new_molecule.get_position_matrix(),
@@ -73,7 +75,7 @@ def test_opt_test_move(optimizer):
 def test_opt_get_result(optimizer, molecule):
     original_pos_mat = molecule.get_position_matrix()
     subunits = molecule.get_subunits(bond_pair_ids=((0, 3), ))
-    results = optimizer.get_result(
+    mol, results = optimizer.get_result(
         mol=molecule,
         bond_pair_ids=((0, 3), ),
         subunits=subunits,
@@ -111,7 +113,7 @@ def test_opt_get_result(optimizer, molecule):
 def test_opt_get_trajectory(optimizer, molecule):
     original_pos_mat = molecule.get_position_matrix()
     subunits = molecule.get_subunits(bond_pair_ids=((0, 3), ))
-    results = optimizer.get_trajectory(
+    mol, results = optimizer.get_trajectory(
         mol=molecule,
         bond_pair_ids=((0, 3), ),
         subunits=subunits,

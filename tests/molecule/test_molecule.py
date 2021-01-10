@@ -10,13 +10,13 @@ def test_molecule_get_position_matrix(molecule, position_matrix):
     ))
 
 
-def test_molecule_update_position_matrix(
+def test_molecule_with_position_matrix(
     molecule, position_matrix2, position_matrix
 ):
-    molecule.update_position_matrix(position_matrix2)
+    test = molecule.with_position_matrix(position_matrix2)
     assert np.all(np.equal(
         position_matrix2,
-        molecule.get_position_matrix(),
+        test.get_position_matrix(),
     ))
 
 
@@ -50,13 +50,10 @@ def test_molecule_get_bonds(molecule, bonds):
 def test_molecule_get_centroid(
     molecule, position_matrix, centroid
 ):
-    print(molecule.get_position_matrix())
-    molecule.update_position_matrix(position_matrix)
-    print(molecule.get_position_matrix())
-    print(molecule.get_centroid())
+    test = molecule.with_position_matrix(position_matrix)
     assert np.all(np.allclose(
         centroid,
-        molecule.get_centroid(),
+        test.get_centroid(),
         atol=1E-6,
     ))
 

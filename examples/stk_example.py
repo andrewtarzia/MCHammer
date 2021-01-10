@@ -81,7 +81,7 @@ subunits = mch_mol.get_subunits(
     bond_pair_ids=stk_long_bond_ids,
 )
 # Just get final step.
-mch_result = optimizer.get_result(
+mch_mol, mch_result = optimizer.get_result(
     mol=mch_mol,
     bond_pair_ids=stk_long_bond_ids,
     subunits=subunits,
@@ -95,7 +95,7 @@ optimizer = mch.Optimizer(
 )
 subunits = get_bbid_subunits(mol=cage)
 # Just get final step.
-mch_result_nci = optimizer.get_result(
+mch_mol_nci, mch_result_nci = optimizer.get_result(
     mol=mch_mol_nci,
     bond_pair_ids=stk_long_bond_ids,
     # Can merge subunits to match distinct BuildingBlocks in stk

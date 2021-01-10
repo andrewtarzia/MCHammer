@@ -12,6 +12,7 @@ import numpy as np
 import time
 
 from scipy.spatial.distance import pdist
+from copy import deepcopy
 import random
 
 from .results import Result, StepResult
@@ -163,14 +164,14 @@ class Optimizer:
 
     def _translate_atoms_along_vector(self, mol, atom_ids, vector):
 
-        new_position_matrix = mol.get_position_matrix()
+        new_position_matrix = deepcopy(mol.get_position_matrix())
         for atom in mol.get_atoms():
             if atom.get_id() not in atom_ids:
                 continue
             pos = mol.get_position_matrix()[atom.get_id()]
             new_position_matrix[atom.get_id()] = pos - vector
 
-        mol.update_position_matrix(new_position_matrix)
+        mol = mol.with_position_matrix(new_position_matrix)
         return mol
 
     def _test_move(self, curr_pot, new_pot):
@@ -395,6 +396,8 @@ class Optimizer:
 
         Returns
         -------
+        mol :
+
         result : :class:`.Result`
             The result of the optimization.
 
@@ -406,7 +409,7 @@ class Optimizer:
             bond_pair_ids,
             subunits,
         )
-        mol.update_position_matrix(
+        mol = mol.with_position_matrix(
             step_result.get_position_matrix()
         )
         system_potential = step_result.get_system_potential()
@@ -423,7 +426,7 @@ class Optimizer:
                 nonbonded_potential=nonbonded_potential,
             )
 
-            mol.update_position_matrix(
+            mol = mol.with_position_matrix(
                 step_result.get_position_matrix()
             )
             system_potential = step_result.get_system_potential()
@@ -444,7 +447,7 @@ class Optimizer:
             ),
         )
 
-        return result
+        return mol, result
 
     def get_result(self, mol, bond_pair_ids, subunits):
         """
@@ -467,6 +470,8 @@ class Optimizer:
 
         Returns
         -------
+        mol ::
+
         result : :class:`.Result`
             The result of the optimization.
 
@@ -478,7 +483,7 @@ class Optimizer:
             bond_pair_ids,
             subunits,
         )
-        mol.update_position_matrix(
+        mol = mol.with_position_matrix(
             step_result.get_position_matrix()
         )
         system_potential = step_result.get_system_potential()
@@ -494,7 +499,7 @@ class Optimizer:
                 nonbonded_potential=nonbonded_potential,
             )
 
-            mol.update_position_matrix(
+            mol = mol.with_position_matrix(
                 step_result.get_position_matrix()
             )
             system_potential = step_result.get_system_potential()
@@ -503,4 +508,4 @@ class Optimizer:
         # Only add final step.
         result.add_step_result(step_result=step_result)
 
-        return result
+        return mol, result

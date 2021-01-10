@@ -79,7 +79,7 @@ optimizer = mch.Collapser(
 )
 subunits = get_bbid_subunits(mol=cage)
 # Get all steps.
-mch_result = optimizer.get_trajectory(
+mch_mol, mch_result = optimizer.get_trajectory(
     mol=mch_mol,
     bond_pair_ids=stk_long_bond_ids,
     subunits=subunits,
@@ -97,5 +97,5 @@ with open('coll_opt.out', 'w') as f:
 if not os.path.exists('coll_poc_traj'):
     os.mkdir('coll_poc_traj')
 for step, new_pos_mat in mch_result.get_trajectory():
-    mch_mol.update_position_matrix(new_pos_mat)
-    mch_mol.write_xyz_file(f'coll_poc_traj/traj_{step}.xyz')
+    new_mol = mch_mol.with_position_matrix(new_pos_mat)
+    new_mol.write_xyz_file(f'coll_poc_traj/traj_{step}.xyz')
