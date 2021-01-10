@@ -187,8 +187,6 @@ class Collapser:
         step_size=None,
     ):
 
-        step_result = StepResult(step=step)
-
         # Get the subunit to centroid vectors and their relative scale.
         su_cent_vectors, su_cent_scales = self._get_subunit_vectors(
             mol=mol,
@@ -202,21 +200,23 @@ class Collapser:
             scales=su_cent_scales,
             step_size=step_size,
         )
+
         mol = mol.with_position_matrix(new_position_matrix)
         # Update properties at each step.
-        step_result.set_position_matrix(mol.get_position_matrix())
-        step_result.set_max_bond_distance(max([
+        max_bond_distance = max([
             get_atom_distance(
                 position_matrix=mol.get_position_matrix(),
                 atom1_id=bond[0],
                 atom2_id=bond[1],
             )
             for bond in bond_pair_ids
-        ]))
-        step_result.update_log(
-            f"{step} {step_result.get_max_bond_distance()}\n"
+        ])
+        step_result = StepResult(
+            step=step,
+            position_matrix=new_position_matrix,
+            max_bond_distance=max_bond_distance,
+            log=f"{step} {max_bond_distance}\n"
         )
-
         return mol, step_result
 
     def get_trajectory(self, mol, bond_pair_ids, subunits):
@@ -240,10 +240,11 @@ class Collapser:
 
         Returns
         -------
-        mol :
+        mol : :class:`.Molecule`
+            The optimized molecule.
 
         result : :class:`.Result`
-            The result of the optimization.
+            The result of the optimization including all steps.
 
         """
 
@@ -306,7 +307,7 @@ class Collapser:
 
     def get_result(self, mol, bond_pair_ids, subunits):
         """
-        Get final result of optimization run on `mol`.
+        Get final result of the optimization of `mol`.
 
         Parameters
         ----------
@@ -325,14 +326,13 @@ class Collapser:
 
         Returns
         -------
-        mol :
+        mol : :class:`.Molecule`
+            The optimized molecule.
 
-        result : :class:`.Result`
-            The result of the optimization.
+        result : :class:`.StepResult`
+            The result of the final optimization step.
 
         """
-
-        result = Result(start_time=time.time())
 
         step = 0
         while not self._has_short_contacts(mol, subunits):
@@ -357,6 +357,4 @@ class Collapser:
                 step=step,
                 step_size=-(self._step_size/2),
             )
-        result.add_step_result(step_result=step_result)
-
-        return mol, result
+        return mol, step_result

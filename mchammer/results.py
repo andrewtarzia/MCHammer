@@ -2,8 +2,9 @@
 Results
 =======
 
-#. :class:`.Result`
 #. :class:`.StepResult`
+#. :class:`.MCStepResult`
+#. :class:`.Result`
 
 Classes for maintaining optimization results.
 
@@ -16,7 +17,7 @@ class StepResult:
 
     """
 
-    def __init__(self, step):
+    def __init__(self, step, position_matrix, max_bond_distance, log):
         """
         Initialize a :class:`StepResult` instance.
 
@@ -25,14 +26,22 @@ class StepResult:
         step : :class:`int`
             Step number.
 
+        position_matrix : :class:`numpy.ndarray`
+            A position matrix after performing this step. The shape of
+            the matrix is ``(n, 3)``.
+
+        max_bond_distance : :class:`float`
+            Max length of bonds to be optimized in Angstrom.
+
+        log : :class:`str`
+            String log of this step.
+
         """
 
         self._step = step
-        self._log = ''
-        self._max_bond_distance = None
-        self._system_potential = None
-        self._nonbonded_potential = None
-        self._passed = None
+        self._position_matrix = position_matrix
+        self._max_bond_distance = max_bond_distance
+        self._log = log
 
     def get_step(self):
         return self._step
@@ -40,23 +49,66 @@ class StepResult:
     def get_log(self):
         return self._log
 
-    def set_position_matrix(self, position_matrix):
-        self._position_matrix = position_matrix
-
-    def set_passed(self, passed):
-        self._passed = passed
-
-    def set_system_potential(self, system_potential):
-        self._system_potential = system_potential
-
-    def set_nonbonded_potential(self, nonbonded_potential):
-        self._nonbonded_potential = nonbonded_potential
-
-    def set_max_bond_distance(self, max_bond_distance):
-        self._max_bond_distance = max_bond_distance
-
     def get_position_matrix(self):
         return self._position_matrix
+
+    def get_max_bond_distance(self):
+        return self._max_bond_distance
+
+
+class MCStepResult(StepResult):
+    """
+    Results of a step.
+
+    """
+
+    def __init__(
+        self,
+        step,
+        position_matrix,
+        passed,
+        system_potential,
+        nonbonded_potential,
+        max_bond_distance,
+        log,
+    ):
+        """
+        Initialize a :class:`MCStepResult` instance.
+
+        Parameters
+        ----------
+        step : :class:`int`
+            Step number.
+
+        position_matrix : :class:`numpy.ndarray`
+            A position matrix after performing this step. The shape of
+            the matrix is ``(n, 3)``.
+
+        passed : :class:`bool` or :class:`None`
+            Flag for whether the MC move passed, or was reverted to
+            the previous step.
+
+        system_potential : :class:`float`
+            System potential of the structure after this step.
+
+        nonbonded_potential : :class:`float`
+            Nonbonded potential of the structure after this step.
+
+        max_bond_distance : :class:`float`
+            Max length of bonds to be optimized in Angstrom.
+
+        log : :class:`str`
+            String log of this step.
+
+        """
+
+        self._step = step
+        self._log = ''
+        self._position_matrix = position_matrix
+        self._passed = passed
+        self._system_potential = system_potential
+        self._nonbonded_potential = nonbonded_potential
+        self._max_bond_distance = max_bond_distance
 
     def get_passed(self):
         return self._passed
@@ -67,9 +119,6 @@ class StepResult:
     def get_nonbonded_potential(self):
         return self._nonbonded_potential
 
-    def get_max_bond_distance(self):
-        return self._max_bond_distance
-
     def get_properties(self):
         return {
             'max_bond_distance': self._max_bond_distance,
@@ -77,13 +126,6 @@ class StepResult:
             'nonbonded_potential': self._nonbonded_potential,
             'passed': self._passed,
         }
-
-    def update_log(self, string):
-        """
-        Update result log.
-
-        """
-        self._log += string
 
 
 class Result:

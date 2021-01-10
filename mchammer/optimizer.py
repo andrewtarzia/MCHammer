@@ -15,7 +15,7 @@ from scipy.spatial.distance import pdist
 from copy import deepcopy
 import random
 
-from .results import Result, StepResult
+from .results import Result, MCStepResult
 from .utilities import get_atom_distance
 
 
@@ -217,22 +217,6 @@ class Optimizer:
         subunits,
     ):
 
-        step_result = StepResult(step=0)
-
-        step_result.update_log(self._output_top_lines())
-        step_result.update_log(
-            f'There are {len(bond_pair_ids)} bonds to optimize.\n'
-        )
-        step_result.update_log(
-            f'There are {len(subunits)} sub units with N atoms:\n'
-            f'{[len(subunits[i]) for i in subunits]}\n'
-        )
-        step_result.update_log(
-            '====================================================\n'
-            '                 Running optimisation!              \n'
-            '====================================================\n\n'
-        )
-
         system_potential, nonbonded_potential = (
             self._compute_potential(
                 mol=mol,
@@ -241,31 +225,31 @@ class Optimizer:
         )
 
         # Update properties at each step.
-        step_result.set_position_matrix(mol.get_position_matrix())
-        step_result.set_passed(None)
-        step_result.set_system_potential(system_potential)
-        step_result.set_nonbonded_potential(nonbonded_potential)
-        step_result.set_max_bond_distance(max([
+        max_bond_distance = max([
             get_atom_distance(
                 position_matrix=mol.get_position_matrix(),
                 atom1_id=bond[0],
                 atom2_id=bond[1],
             )
             for bond in bond_pair_ids
-        ]))
-        step_result.update_log(
-            'step system_potential nonbond_potential max_dist '
-            'opt_bbs updated?\n'
-        )
-        step_result.update_log(
-            f"{0} "
-            f"{step_result.get_system_potential()} "
-            f"{step_result.get_nonbonded_potential()} "
-            f"{step_result.get_max_bond_distance()} "
-            '-- --\n'
+        ])
+        step_result = MCStepResult(
+            step=0,
+            position_matrix=mol.get_position_matrix(),
+            passed=None,
+            system_potential=system_potential,
+            nonbonded_potential=nonbonded_potential,
+            max_bond_distance=max_bond_distance,
+            log=(
+                f"{0} "
+                f"{system_potential} "
+                f"{nonbonded_potential} "
+                f"{max_bond_distance} "
+                '-- --\n'
+            ),
         )
 
-        return step_result
+        return mol, step_result
 
     def _run_step(
         self,
@@ -277,7 +261,6 @@ class Optimizer:
         nonbonded_potential,
     ):
 
-        step_result = StepResult(step=step)
         position_matrix = mol.get_position_matrix()
 
         # Randomly select a bond to optimize from bonds.
@@ -352,28 +335,31 @@ class Optimizer:
             )
 
         # Update properties at each step.
-        step_result.set_position_matrix(mol.get_position_matrix())
-        step_result.set_passed(passed)
-        step_result.set_system_potential(system_potential)
-        step_result.set_nonbonded_potential(nonbonded_potential)
-        step_result.set_max_bond_distance(max([
+        max_bond_distance = max([
             get_atom_distance(
                 position_matrix=mol.get_position_matrix(),
                 atom1_id=bond[0],
                 atom2_id=bond[1],
             )
             for bond in bond_pair_ids
-        ]))
-
-        step_result.update_log(
-            f"{step} "
-            f"{step_result.get_system_potential()} "
-            f"{step_result.get_nonbonded_potential()} "
-            f"{step_result.get_max_bond_distance()} "
-            f'{bond_ids} {updated}\n'
+        ])
+        step_result = MCStepResult(
+            step=step,
+            position_matrix=mol.get_position_matrix(),
+            passed=passed,
+            system_potential=system_potential,
+            nonbonded_potential=nonbonded_potential,
+            max_bond_distance=max_bond_distance,
+            log=(
+                f"{step} "
+                f"{system_potential} "
+                f"{nonbonded_potential} "
+                f"{max_bond_distance} "
+                f'{bond_ids} {updated}\n'
+            ),
         )
 
-        return step_result
+        return mol, step_result
 
     def get_trajectory(self, mol, bond_pair_ids, subunits):
         """
@@ -396,28 +382,44 @@ class Optimizer:
 
         Returns
         -------
-        mol :
+        mol : :class:`.Molecule`
+            The optimized molecule.
 
         result : :class:`.Result`
-            The result of the optimization.
+            The result of the optimization including all steps.
 
         """
 
         result = Result(start_time=time.time())
-        step_result = self._run_first_step(
+
+        result.update_log(self._output_top_lines())
+        result.update_log(
+            f'There are {len(bond_pair_ids)} bonds to optimize.\n'
+        )
+        result.update_log(
+            f'There are {len(subunits)} sub units with N atoms:\n'
+            f'{[len(subunits[i]) for i in subunits]}\n'
+        )
+        result.update_log(
+            '====================================================\n'
+            '                 Running optimisation!              \n'
+            '====================================================\n\n'
+        )
+        result.update_log(
+            'step system_potential nonbond_potential max_dist '
+            'opt_bbs updated?\n'
+        )
+        mol, step_result = self._run_first_step(
             mol,
             bond_pair_ids,
             subunits,
-        )
-        mol = mol.with_position_matrix(
-            step_result.get_position_matrix()
         )
         system_potential = step_result.get_system_potential()
         nonbonded_potential = step_result.get_nonbonded_potential()
         result.add_step_result(step_result=step_result)
 
         for step in range(1, self._num_steps):
-            step_result = self._run_step(
+            mol, step_result = self._run_step(
                 mol=mol,
                 bond_pair_ids=bond_pair_ids,
                 subunits=subunits,
@@ -426,9 +428,6 @@ class Optimizer:
                 nonbonded_potential=nonbonded_potential,
             )
 
-            mol = mol.with_position_matrix(
-                step_result.get_position_matrix()
-            )
             system_potential = step_result.get_system_potential()
             nonbonded_potential = step_result.get_nonbonded_potential()
             result.add_step_result(step_result=step_result)
@@ -470,27 +469,24 @@ class Optimizer:
 
         Returns
         -------
-        mol ::
+        mol : :class:`.Molecule`
+            The optimized molecule.
 
-        result : :class:`.Result`
-            The result of the optimization.
+        result : :class:`.MCStepResult`
+            The result of the final optimization step.
 
         """
 
-        result = Result(start_time=time.time())
-        step_result = self._run_first_step(
+        mol, step_result = self._run_first_step(
             mol,
             bond_pair_ids,
             subunits,
-        )
-        mol = mol.with_position_matrix(
-            step_result.get_position_matrix()
         )
         system_potential = step_result.get_system_potential()
         nonbonded_potential = step_result.get_nonbonded_potential()
 
         for step in range(1, self._num_steps):
-            step_result = self._run_step(
+            mol, step_result = self._run_step(
                 mol=mol,
                 bond_pair_ids=bond_pair_ids,
                 subunits=subunits,
@@ -498,14 +494,7 @@ class Optimizer:
                 system_potential=system_potential,
                 nonbonded_potential=nonbonded_potential,
             )
-
-            mol = mol.with_position_matrix(
-                step_result.get_position_matrix()
-            )
             system_potential = step_result.get_system_potential()
             nonbonded_potential = step_result.get_nonbonded_potential()
 
-        # Only add final step.
-        result.add_step_result(step_result=step_result)
-
-        return mol, result
+        return mol, step_result
