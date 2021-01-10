@@ -127,5 +127,5 @@ step system_potential nonbond_potential max_dist opt_bbs updated?
 ============================================
 Optimisation done:
 24 steps passed: 24.0%
-Total optimisation time: 0.0247s
+Total optimisation time: 0.023s
 ============================================

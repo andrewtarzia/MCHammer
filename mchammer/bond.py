@@ -9,17 +9,13 @@ Bond class.
 """
 
 
-class AtomIDOrderingError(Exception):
-    ...
-
-
 class Bond:
     """
     Bond between two atoms.
 
     """
 
-    def __init__(self, id, atom1_id, atom2_id):
+    def __init__(self, id, atom_ids):
         """
         Initialize a :class:`Bond` instance.
 
@@ -28,24 +24,16 @@ class Bond:
         id : :class:`int`
             ID to be assigned to bond.
 
-        atom1_id : :class:`int`
-            ID of atom 1 in bond.
-
-
-        atom2_id : :class:`int`
-            ID of atom 2 in bond.
+        atom_ids : :class:`tuple` of :class:`int`
+            IDs of atom 1 and atom 2 in bond, where atom 1 is always
+            the smaller number and the IDs cannot be the same.
 
         """
 
         self._id = id
-        if atom1_id > atom2_id:
-            raise AtomIDOrderingError(
-                f'Atom 1 ID ({atom1_id}) must be less than Atom 2 ID'
-                f'({atom2_id}).'
-            )
-
-        self._atom1_id = atom1_id
-        self._atom2_id = atom2_id
+        if len(set(atom_ids)) == 0:
+            raise ValueError('Two distict atom ids are required.')
+        self._atom1_id, self._atom2_id = sorted(atom_ids)
 
     def get_id(self):
         """

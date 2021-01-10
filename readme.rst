@@ -51,7 +51,7 @@ Examples
 
 This code was originally written for use with *stk* (<https://stk.readthedocs.io/>), which assembles structures with long bonds that we wanted to optimize quickly.
 Now it has been generalized to take any molecule (defined by atoms and bonds) and a set of bonds to optimize to some target bond length.
-The algorithm is unphysical in that the bonded and nonbonded potential we apply is meaningless, other than to give a reasonable structure for futher optimisation or use in a workflow!
+The algorithm is unphysical in that the bonded and nonbonded potential we apply is meaningless, other than to give a reasonable structure for further optimisation or use in a workflow!
 
 The Optimizer class provides two main method: `get_result` and `get_trajectory`, which provide the optimized structure and properties or the structure and properties of each MC step, respectively.
 The molecule at each step of the trajectory and its properties can be collected from the results of the get_trajectory method, but not the get_result method (the example file: ``examples/minimum_example.py`` shows how to plot the optimisation progress and output the trajectory).

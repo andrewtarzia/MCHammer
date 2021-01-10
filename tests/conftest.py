@@ -16,10 +16,10 @@ def atom_info(request):
 
 @pytest.fixture(
     params=(
-        (mch.Bond(id=0, atom1_id=0, atom2_id=1), 0, 0, 1),
-        (mch.Bond(id=65, atom1_id=2, atom2_id=3), 65, 2, 3),
-        (mch.Bond(id=2, atom1_id=3, atom2_id=4), 2, 3, 4),
-        (mch.Bond(id=3, atom1_id=0, atom2_id=9), 3, 0, 9),
+        (mch.Bond(id=0, atom_ids=(0, 1)), 0, 0, 1),
+        (mch.Bond(id=65, atom_ids=(2, 3)), 65, 2, 3),
+        (mch.Bond(id=2, atom_ids=(3, 4)), 2, 3, 4),
+        (mch.Bond(id=3, atom_ids=(0, 9)), 3, 0, 9),
     )
 )
 def bond_info(request):
@@ -37,8 +37,8 @@ def atoms():
 @pytest.fixture
 def bonds():
     return [
-        mch.Bond(0, 0, 1), mch.Bond(1, 0, 2), mch.Bond(2, 0, 3),
-        mch.Bond(3, 3, 4), mch.Bond(4, 3, 5)
+        mch.Bond(0, (0, 1)), mch.Bond(1, (0, 2)), mch.Bond(2, (0, 3)),
+        mch.Bond(3, (3, 4)), mch.Bond(4, (3, 5))
     ]
 
 
@@ -146,8 +146,8 @@ def coll_atoms():
 @pytest.fixture
 def coll_bonds():
     return [
-        mch.Bond(0, 0, 1), mch.Bond(1, 0, 2), mch.Bond(2, 0, 3),
-        mch.Bond(3, 3, 4), mch.Bond(4, 3, 5)
+        mch.Bond(0, (0, 1)), mch.Bond(1, (0, 2)), mch.Bond(2, (0, 3)),
+        mch.Bond(3, (3, 4)), mch.Bond(4, (3, 5))
     ]
 
 
