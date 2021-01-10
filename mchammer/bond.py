@@ -24,7 +24,7 @@ class Bond:
         id : :class:`int`
             ID to be assigned to bond.
 
-        atom_ids : :class:`tuple` of :class:`int`
+        atom_ids : :class:`iterable` of :class:`int`
             IDs of atom 1 and atom 2 in bond, where atom 1 is always
             the smaller number and the IDs cannot be the same.
 
