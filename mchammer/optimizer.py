@@ -96,8 +96,10 @@ class Optimizer:
         self._beta = beta
         if random_seed is None:
             random.seed()
+            np.random.seed()
         else:
             random.seed(random_seed)
+            np.random.seed(random_seed)
 
     def _get_bond_vector(self, position_matrix, bond_pair):
         """
