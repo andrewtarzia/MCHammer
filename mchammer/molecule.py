@@ -10,6 +10,10 @@ Molecule class for optimisation.
 
 import numpy as np
 import networkx as nx
+from itertools import combinations
+from collections import Counter
+
+from .angle import Angle
 
 
 class Molecule:
@@ -38,6 +42,7 @@ class Molecule:
 
         self._atoms = tuple(atoms)
         self._bonds = tuple(bonds)
+        self._angles = self._extract_angles()
         self._position_matrix = np.array(
             position_matrix.T,
             dtype=np.float64,
@@ -136,6 +141,53 @@ class Molecule:
         for bond in self._bonds:
             yield bond
 
+    def _extract_angles(self):
+        """
+        Define angles in molecule.
+
+        """
+
+        angles = []
+        count = 0
+        for bond1, bond2 in combinations(self._bonds, 2):
+            b1_a1 = bond1.get_atom1_id()
+            b1_a2 = bond1.get_atom2_id()
+            b2_a1 = bond2.get_atom1_id()
+            b2_a2 = bond2.get_atom2_id()
+            if bond1.get_id() == bond2.get_id():
+                continue
+            sets = set((b1_a1, b1_a2, b2_a1, b2_a2))
+            if len(sets) != 3:
+                continue
+            counts = Counter((b1_a1, b1_a2, b2_a1, b2_a2))
+            for c in counts:
+                amount = counts[c]
+                if amount == 2:
+                    angle_atom2_id = c
+                    break
+            angle_atom1_id, angle_atom3_id = (
+                i for i in sets if i != angle_atom2_id
+            )
+            atom_ids = (angle_atom1_id, angle_atom2_id, angle_atom3_id)
+            id_ = count
+            angles.append(Angle(id_, atom_ids))
+            count += 1
+        return angles
+
+    def get_angles(self):
+        """
+        Yield the angles in the molecule, ordered as input.
+
+        Yields
+        ------
+        :class:`.Angle`
+            An angle in the molecule.
+
+        """
+
+        for angle in self._angles:
+            yield angle
+
     def get_centroid(self, atom_ids=None):
         """
         Return the centroid.
@@ -175,6 +227,41 @@ class Molecule:
             len(atom_ids)
         )
 
+    def get_nx_graph(self, bond_pair_ids=None):
+        """
+        Get networkX graph of molecule.
+
+        Parameters
+        ----------
+        bond_pair_ids :
+            :class:`iterable` of :class:`tuple` of :class:`ints`
+            Iterable of pairs of atom ids with bond between them to
+            optimize.
+
+        Returns
+        -------
+        graph : :class:`networkx.graph`
+            The graph of `mol`.
+
+        """
+
+        if bond_pair_ids is None:
+            bond_pair_ids = (None, )
+
+        # Produce a graph from the molecule that does not include edges
+        # where the bonds to be optimized are.
+        mol_graph = nx.Graph()
+        for atom in self.get_atoms():
+            mol_graph.add_node(atom.get_id())
+
+        # Add edges.
+        for bond in self.get_bonds():
+            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
+            if pair_ids not in bond_pair_ids:
+                mol_graph.add_edge(*pair_ids)
+
+        return mol_graph
+
     def get_subunits(self, bond_pair_ids):
         """
         Get connected graphs based on Molecule separated by bonds.
@@ -195,17 +282,7 @@ class Molecule:
 
         """
 
-        # Produce a graph from the molecule that does not include edges
-        # where the bonds to be optimized are.
-        mol_graph = nx.Graph()
-        for atom in self.get_atoms():
-            mol_graph.add_node(atom.get_id())
-
-        # Add edges.
-        for bond in self.get_bonds():
-            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
-            if pair_ids not in bond_pair_ids:
-                mol_graph.add_edge(*pair_ids)
+        mol_graph = self.get_nx_graph(bond_pair_ids)
 
         # Get atom ids in disconnected subgraphs.
         subunits = {
