@@ -5,3 +5,4 @@ from .atom import *  # noqa
 from .bond import *  # noqa
 from .utilities import *  # noqa
 from .results import *  # noqa
+from .scipy_optimizer import *  # noqa
