@@ -10,12 +10,16 @@ Optimizer for minimising intermolecular distances.
 
 import numpy as np
 import time
-
-import random
+import scipy
+from scipy.spatial.distance import pdist
 
 from .results import Result, MCStepResult
-from .utilities import get_atom_distance
+from .utilities import get_atom_distance, get_angle
 from .optimizer import Optimizer
+
+
+class OptimizerConvergenceException(Exception):
+    ...
 
 
 class ScipyOptimizer(Optimizer):
@@ -26,24 +30,19 @@ class ScipyOptimizer(Optimizer):
 
     def __init__(
         self,
-        step_size,
         target_bond_length,
         num_steps,
         bond_epsilon=50,
+        angle_epsilon=500,
         nonbond_epsilon=20,
         nonbond_sigma=1.2,
         nonbond_mu=3,
-        beta=2,
-        random_seed=1000,
     ):
         """
         Initialize a :class:`ScipyOptimizer` instance.
 
         Parameters
         ----------
-        step_size : :class:`float`
-            The relative size of the step to take during step.
-
         target_bond_length : :class:`float`
             Target equilibrium bond length for long bonds to minimize
             to.
@@ -70,185 +69,148 @@ class ScipyOptimizer(Optimizer):
             Determines the steepness of the nonbond potential.
             Defaults to 3.
 
-        beta : :class:`float`, optional
-            Value of beta used in the in MC moves. Beta takes the
-            place of the inverse boltzmann temperature.
-            Defaults to 2.
-
-        random_seed : :class:`int` or :class:`NoneType`, optional
-            Random seed to use for MC algorithm. Should only be set to
-            ``None`` if system-based random seed is desired. Defaults
-            to 1000.
-
         """
 
-        self._step_size = step_size
         self._target_bond_length = target_bond_length
         self._num_steps = num_steps
         self._bond_epsilon = bond_epsilon
+        self._angle_epsilon = angle_epsilon
         self._nonbond_epsilon = nonbond_epsilon
         self._nonbond_sigma = nonbond_sigma
         self._nonbond_mu = nonbond_mu
-        self._beta = beta
-        if random_seed is None:
-            random.seed()
-            np.random.seed()
-        else:
-            random.seed(random_seed)
-            np.random.seed(random_seed)
 
-    def _run_first_step(
-        self,
-        mol,
-        bond_pair_ids,
-        subunits,
-    ):
+    def _bond_potential(self, distance, target_distance, bond_epsilon):
+        """
+        Define an arbitrary parabolic bond potential.
 
-        system_potential, nonbonded_potential = (
-            self._compute_potential(
-                mol=mol,
-                bond_pair_ids=bond_pair_ids
+        This potential has no relation to an empircal forcefield.
+
+        """
+
+        potential = (distance - target_distance) ** 2
+        potential = bond_epsilon * potential
+
+        return potential
+
+    def _angle_potential(self, angle, target_angle, angle_epsilon):
+        """
+        Define an arbitrary parabolic bond potential.
+
+        This potential has no relation to an empircal forcefield.
+
+        """
+
+        potential = (angle - target_angle) ** 2
+        potential = angle_epsilon * potential
+
+        return potential
+
+    def _nonbond_potential(self, distance):
+        """
+        Define an arbitrary repulsive nonbonded potential.
+
+        This potential has no relation to an empircal forcefield.
+
+        """
+
+        return (
+            self._nonbond_epsilon * (
+                (self._nonbond_sigma/distance) ** self._nonbond_mu
             )
         )
 
-        # Update properties at each step.
-        max_bond_distance = max([
-            get_atom_distance(
-                position_matrix=mol.get_position_matrix(),
-                atom1_id=bond[0],
-                atom2_id=bond[1],
-            )
-            for bond in bond_pair_ids
-        ])
-        step_result = MCStepResult(
-            step=0,
-            position_matrix=mol.get_position_matrix(),
-            passed=None,
-            system_potential=system_potential,
-            nonbonded_potential=nonbonded_potential,
-            max_bond_distance=max_bond_distance,
-            log=(
-                f"{0} "
-                f"{system_potential} "
-                f"{nonbonded_potential} "
-                f"{max_bond_distance} "
-                '-- --\n'
-            ),
+    def _compute_nonbonded_potential(self, pair_dists):
+        nonbonded_potential = np.sum(
+            self._nonbond_potential(pair_dists)
         )
 
-        return mol, step_result
+        return nonbonded_potential
 
-    def _run_step(
+    def _compute_potential_from_posmat(
         self,
-        mol,
-        bond_pair_ids,
-        subunits,
-        step,
-        system_potential,
-        nonbonded_potential,
+        x,
+        bond_targets,
+        angle_targets,
     ):
+        position_matrix = x.reshape((-1, 3))
+        pair_dists = pdist(position_matrix)
+        nonbonded_potential = self._compute_nonbonded_potential(
+            pair_dists=pair_dists,
+        )
+        system_potential = nonbonded_potential
+        m = position_matrix.shape[0]
+        for bond in bond_targets:
+            i = bond[0]
+            j = bond[1]
+            id_ = int(m * i + j - ((i + 2) * (i + 1)) // 2.)
+            system_potential += self._bond_potential(
+                distance=pair_dists[id_],
+                target_distance=bond[2],
+                bond_epsilon=bond[3],
+            )
 
+        for angle in angle_targets:
+            system_potential += self._angle_potential(
+                angle=get_angle(
+                    position_matrix=position_matrix,
+                    atom1_id=angle[0],
+                    atom2_id=angle[1],
+                    atom3_id=angle[2],
+                ),
+                target_angle=angle[3],
+                angle_epsilon=angle[4],
+            )
+
+        return system_potential
+
+    def _get_bond_targets(self, mol, bond_pair_ids):
+        bond_targets = []
         position_matrix = mol.get_position_matrix()
-
-        # Randomly select a bond to optimize from bonds.
-        bond_ids = random.choice(bond_pair_ids)
-        bond_vector = self._get_bond_vector(
-            position_matrix=position_matrix,
-            bond_pair=bond_ids
-        )
-
-        # Get subunits connected by selected bonds.
-        subunit_1 = [
-            i for i in subunits if bond_ids[0] in subunits[i]
-        ][0]
-        subunit_2 = [
-            i for i in subunits if bond_ids[1] in subunits[i]
-        ][0]
-
-        # Choose subunit to move out of the two connected by the
-        # bond randomly.
-        moving_su = random.choice([subunit_1, subunit_2])
-        moving_su_atom_ids = tuple(i for i in subunits[moving_su])
-
-        # Random number from -1 to 1 for multiplying translation.
-        rand = (random.random() - 0.5) * 2
-        # Define translation along long bond vector where
-        # direction is from force, magnitude is randomly
-        # scaled.
-        bond_translation = -bond_vector * self._step_size * rand
-
-        # Define subunit COM vector to molecule COM.
-        cent = mol.get_centroid()
-        su_cent_vector = (
-            mol.get_centroid(atom_ids=moving_su_atom_ids)-cent
-        )
-        com_translation = su_cent_vector * self._step_size * rand
-
-        # Randomly choose between translation along long bond
-        # vector or along BB-COM vector.
-        translation_vector = random.choice([
-            bond_translation,
-            com_translation,
-        ])
-
-        # Translate building block.
-        # Update atom position of building block.
-        mol = self._translate_atoms_along_vector(
-            mol=mol,
-            atom_ids=moving_su_atom_ids,
-            vector=translation_vector,
-        )
-
-        new_system_potential, new_nonbonded_potential = (
-            self._compute_potential(
-                mol=mol,
-                bond_pair_ids=bond_pair_ids
+        for bond in mol.get_bonds():
+            a1_id, a2_id = sorted(
+                [bond.get_atom1_id(), bond.get_atom2_id()]
             )
-        )
+            if (a1_id, a2_id) in bond_pair_ids:
+                target = self._target_bond_length
+                epsilon = 1*self._bond_epsilon
+            else:
+                target = get_atom_distance(
+                    position_matrix=position_matrix,
+                    atom1_id=a1_id,
+                    atom2_id=a2_id,
+                )
+                epsilon = 3*self._bond_epsilon
+            bond_targets.append((a1_id, a2_id, target, epsilon))
+        return bond_targets
 
-        if self._test_move(system_potential, new_system_potential):
-            updated = 'T'
-            passed = True
-            system_potential = new_system_potential
-            nonbonded_potential = new_nonbonded_potential
-        else:
-            updated = 'F'
-            passed = False
-            # Reverse move.
-            mol = self._translate_atoms_along_vector(
-                mol=mol,
-                atom_ids=moving_su_atom_ids,
-                vector=-translation_vector,
+    def _get_angle_targets(self, mol, bond_pair_ids):
+        angle_targets = []
+        position_matrix = mol.get_position_matrix()
+        for angle in mol.get_angles():
+            a1_id, a2_id, a3_id = (
+                angle.get_atom1_id(),
+                angle.get_atom2_id(),
+                angle.get_atom3_id(),
             )
-
-        # Update properties at each step.
-        max_bond_distance = max([
-            get_atom_distance(
-                position_matrix=mol.get_position_matrix(),
-                atom1_id=bond[0],
-                atom2_id=bond[1],
+            b1 = sorted((a1_id, a2_id))
+            b2 = sorted((a2_id, a3_id))
+            if b1 not in bond_pair_ids and b2 not in bond_pair_ids:
+                target = get_angle(
+                    position_matrix=position_matrix,
+                    atom1_id=a1_id,
+                    atom2_id=a2_id,
+                    atom3_id=a3_id,
+                )
+                epsilon = self._angle_epsilon
+            angle_targets.append(
+                (a1_id, a2_id, a3_id, target, epsilon)
             )
-            for bond in bond_pair_ids
-        ])
-        step_result = MCStepResult(
-            step=step,
-            position_matrix=mol.get_position_matrix(),
-            passed=passed,
-            system_potential=system_potential,
-            nonbonded_potential=nonbonded_potential,
-            max_bond_distance=max_bond_distance,
-            log=(
-                f"{step} "
-                f"{system_potential} "
-                f"{nonbonded_potential} "
-                f"{max_bond_distance} "
-                f'{bond_ids} {updated}\n'
-            ),
-        )
+        return angle_targets
 
-        return mol, step_result
+    def _get_x(self, mol):
+        return mol.get_position_matrix().reshape(-1)
 
-    def get_trajectory(self, mol, bond_pair_ids, subunits):
+    def get_trajectory(self, mol, bond_pair_ids):
         """
         Get trajectory of optimization run on `mol`.
 
@@ -262,11 +224,6 @@ class ScipyOptimizer(Optimizer):
             Iterable of pairs of atom ids with bond between them to
             optimize.
 
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
-
         Returns
         -------
         mol : :class:`.Molecule`
@@ -279,54 +236,68 @@ class ScipyOptimizer(Optimizer):
 
         result = Result(start_time=time.time())
 
-        result.update_log(self._output_top_lines())
         result.update_log(
-            f'There are {len(bond_pair_ids)} bonds to optimize.\n'
+            '====================================================\n'
+            "                    Scipy algorithm.\n"
+            '====================================================\n'
         )
         result.update_log(
-            f'There are {len(subunits)} sub units with N atoms:\n'
-            f'{[len(subunits[i]) for i in subunits]}\n'
+            f'There are {len(bond_pair_ids)} bonds to optimize.\n'
         )
         result.update_log(
             '====================================================\n'
             '                 Running optimisation!              \n'
             '====================================================\n\n'
         )
-        result.update_log(
-            'step system_potential nonbond_potential max_dist '
-            'opt_bbs updated?\n'
-        )
-        mol, step_result = self._run_first_step(
-            mol,
-            bond_pair_ids,
-            subunits,
-        )
-        system_potential = step_result.get_system_potential()
-        nonbonded_potential = step_result.get_nonbonded_potential()
-        result.add_step_result(step_result=step_result)
 
-        for step in range(1, self._num_steps):
-            mol, step_result = self._run_step(
-                mol=mol,
-                bond_pair_ids=bond_pair_ids,
-                subunits=subunits,
-                step=step,
-                system_potential=system_potential,
-                nonbonded_potential=nonbonded_potential,
+        bond_targets = self._get_bond_targets(
+            mol=mol,
+            bond_pair_ids=bond_pair_ids,
+        )
+        angle_targets = self._get_angle_targets(
+            mol=mol,
+            bond_pair_ids=bond_pair_ids,
+        )
+
+        x0 = self._get_x(mol)
+        print('init', self._compute_potential_from_posmat(
+            mol.get_position_matrix(),
+            bond_targets,
+            angle_targets,
+        ))
+
+        # Define the optimizer based on minimizing the potential.
+        def func(x, *args):
+            """
+            Function to optimize, where `x` is position matrix.
+
+            """
+
+            return self._compute_potential_from_posmat(
+                x, args[0], args[1]
             )
 
-            system_potential = step_result.get_system_potential()
-            nonbonded_potential = step_result.get_nonbonded_potential()
-            result.add_step_result(step_result=step_result)
+        opt_result = scipy.optimize.minimize(
+            fun=func,
+            x0=x0,
+            method='BFGS',
+            options={'maxiter': self._num_steps},
+            args=(bond_targets, angle_targets),
+        )
+        print(opt_result['message'])
+        # Update position matrix.
+        new_position_matrix = opt_result['x'].reshape((-1, 3))
+        mol = mol.with_position_matrix(new_position_matrix)
+        print('final', self._compute_potential_from_posmat(
+            mol.get_position_matrix(),
+            bond_targets,
+            angle_targets,
+        ))
 
-        num_passed = result.get_number_passed()
         result.update_log(
             string=(
                 '\n============================================\n'
                 'Optimisation done:\n'
-                f'{num_passed} steps passed: '
-                f'{(num_passed/self._num_steps)*100}'
-                '%\n'
                 f'Total optimisation time: '
                 f'{round(result.get_timing(time.time()), 4)}s\n'
                 '============================================\n'
@@ -335,7 +306,7 @@ class ScipyOptimizer(Optimizer):
 
         return mol, result
 
-    def get_result(self, mol, bond_pair_ids, subunits):
+    def get_result(self, mol, bond_pair_ids):
         """
         Get final result of optimization run on `mol`.
 
@@ -349,11 +320,6 @@ class ScipyOptimizer(Optimizer):
             Iterable of pairs of atom ids with bond between them to
             optimize.
 
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
-
         Returns
         -------
         mol : :class:`.Molecule`
@@ -364,24 +330,50 @@ class ScipyOptimizer(Optimizer):
 
         """
 
-        mol, step_result = self._run_first_step(
-            mol,
-            bond_pair_ids,
-            subunits,
+        result = Result(start_time=time.time())
+
+        bond_targets = self._get_bond_targets(
+            mol=mol,
+            bond_pair_ids=bond_pair_ids,
         )
-        system_potential = step_result.get_system_potential()
-        nonbonded_potential = step_result.get_nonbonded_potential()
+        angle_targets = self._get_angle_targets(
+            mol=mol,
+            bond_pair_ids=bond_pair_ids,
+        )
 
-        for step in range(1, self._num_steps):
-            mol, step_result = self._run_step(
-                mol=mol,
-                bond_pair_ids=bond_pair_ids,
-                subunits=subunits,
-                step=step,
-                system_potential=system_potential,
-                nonbonded_potential=nonbonded_potential,
+        x0 = self._get_x(mol)
+        print('init', self._compute_potential_from_posmat(
+            mol.get_position_matrix(),
+            bond_targets,
+            angle_targets,
+        ))
+
+        # Define the optimizer based on minimizing the potential.
+        def func(x, *args):
+            """
+            Function to optimize, where `x` is position matrix.
+
+            """
+
+            return self._compute_potential_from_posmat(
+                x, args[0], args[1]
             )
-            system_potential = step_result.get_system_potential()
-            nonbonded_potential = step_result.get_nonbonded_potential()
 
-        return mol, step_result
+        opt_result = scipy.optimize.minimize(
+            fun=func,
+            x0=x0,
+            method='BFGS',
+            options={'maxiter': self._num_steps},
+            args=(bond_targets, angle_targets),
+        )
+        print(opt_result['message'])
+        # Update position matrix.
+        new_position_matrix = opt_result['x'].reshape((-1, 3))
+        mol = mol.with_position_matrix(new_position_matrix)
+        print('final', self._compute_potential_from_posmat(
+            mol.get_position_matrix(),
+            bond_targets,
+            angle_targets,
+        ))
+
+        return mol, result
