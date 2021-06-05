@@ -14,6 +14,7 @@ import scipy
 from scipy.spatial.distance import pdist
 
 from .results import Result, MCStepResult
+from .decomposed_molecule import DecomposedMolecule
 from .utilities import get_atom_distance, get_angle
 from .optimizer import Optimizer
 
@@ -79,54 +80,15 @@ class ScipyOptimizer(Optimizer):
         self._nonbond_sigma = nonbond_sigma
         self._nonbond_mu = nonbond_mu
 
-    def _bond_potential(self, distance, target_distance, bond_epsilon):
+    def _squared_difference(self, x, target_x):
         """
-        Define an arbitrary parabolic bond potential.
-
-        This potential has no relation to an empircal forcefield.
+        Return squared difference between x and target.
 
         """
 
-        potential = (distance - target_distance) ** 2
-        potential = bond_epsilon * potential
+        return (x - target_x) ** 2
 
-        return potential
-
-    def _angle_potential(self, angle, target_angle, angle_epsilon):
-        """
-        Define an arbitrary parabolic bond potential.
-
-        This potential has no relation to an empircal forcefield.
-
-        """
-
-        potential = (angle - target_angle) ** 2
-        potential = angle_epsilon * potential
-
-        return potential
-
-    def _nonbond_potential(self, distance):
-        """
-        Define an arbitrary repulsive nonbonded potential.
-
-        This potential has no relation to an empircal forcefield.
-
-        """
-
-        return (
-            self._nonbond_epsilon * (
-                (self._nonbond_sigma/distance) ** self._nonbond_mu
-            )
-        )
-
-    def _compute_nonbonded_potential(self, pair_dists):
-        nonbonded_potential = np.sum(
-            self._nonbond_potential(pair_dists)
-        )
-
-        return nonbonded_potential
-
-    def _compute_potential_from_posmat(
+    def _compute_mean_square_error(
         self,
         x,
         bond_targets,
@@ -134,34 +96,29 @@ class ScipyOptimizer(Optimizer):
     ):
         position_matrix = x.reshape((-1, 3))
         pair_dists = pdist(position_matrix)
-        nonbonded_potential = self._compute_nonbonded_potential(
-            pair_dists=pair_dists,
-        )
-        system_potential = nonbonded_potential
+        differences = []
         m = position_matrix.shape[0]
         for bond in bond_targets:
             i = bond[0]
             j = bond[1]
             id_ = int(m * i + j - ((i + 2) * (i + 1)) // 2.)
-            system_potential += self._bond_potential(
-                distance=pair_dists[id_],
-                target_distance=bond[2],
-                bond_epsilon=bond[3],
-            )
+            differences.append(self._squared_difference(
+                x=pair_dists[id_],
+                target_x=bond[2],
+            ))
 
         for angle in angle_targets:
-            system_potential += self._angle_potential(
-                angle=get_angle(
+            differences.append(self._squared_difference(
+                x=get_angle(
                     position_matrix=position_matrix,
                     atom1_id=angle[0],
                     atom2_id=angle[1],
                     atom3_id=angle[2],
                 ),
-                target_angle=angle[3],
-                angle_epsilon=angle[4],
-            )
+                target_x=angle[3],
+            ))
 
-        return system_potential
+        return np.mean(differences)
 
     def _get_bond_targets(self, mol, bond_pair_ids):
         bond_targets = []
@@ -172,15 +129,13 @@ class ScipyOptimizer(Optimizer):
             )
             if (a1_id, a2_id) in bond_pair_ids:
                 target = self._target_bond_length
-                epsilon = 1*self._bond_epsilon
             else:
                 target = get_atom_distance(
                     position_matrix=position_matrix,
                     atom1_id=a1_id,
                     atom2_id=a2_id,
                 )
-                epsilon = 3*self._bond_epsilon
-            bond_targets.append((a1_id, a2_id, target, epsilon))
+            bond_targets.append((a1_id, a2_id, target))
         return bond_targets
 
     def _get_angle_targets(self, mol, bond_pair_ids):
@@ -201,9 +156,8 @@ class ScipyOptimizer(Optimizer):
                     atom2_id=a2_id,
                     atom3_id=a3_id,
                 )
-                epsilon = self._angle_epsilon
             angle_targets.append(
-                (a1_id, a2_id, a3_id, target, epsilon)
+                (a1_id, a2_id, a3_id, target)
             )
         return angle_targets
 
@@ -233,6 +187,8 @@ class ScipyOptimizer(Optimizer):
             The result of the optimization including all steps.
 
         """
+
+        raise NotImplementedError('get result mate.')
 
         result = Result(start_time=time.time())
 
@@ -332,18 +288,26 @@ class ScipyOptimizer(Optimizer):
 
         result = Result(start_time=time.time())
 
-        bond_targets = self._get_bond_targets(
-            mol=mol,
+        decomposed_mol = DecomposedMolecule.decompose_molecule(
+            molecule=mol,
             bond_pair_ids=bond_pair_ids,
+        )
+        decomposed_bond_pair_ids = decomposed_mol.get_bond_pair_ids()
+
+        decomposed_mol.write_pdb_file('decomp.pdb')
+
+        bond_targets = self._get_bond_targets(
+            mol=decomposed_mol,
+            bond_pair_ids=decomposed_bond_pair_ids,
         )
         angle_targets = self._get_angle_targets(
-            mol=mol,
-            bond_pair_ids=bond_pair_ids,
+            mol=decomposed_mol,
+            bond_pair_ids=decomposed_bond_pair_ids,
         )
 
-        x0 = self._get_x(mol)
-        print('init', self._compute_potential_from_posmat(
-            mol.get_position_matrix(),
+        x0 = self._get_x(decomposed_mol)
+        print('init', self._compute_mean_square_error(
+            decomposed_mol.get_position_matrix(),
             bond_targets,
             angle_targets,
         ))
@@ -355,7 +319,7 @@ class ScipyOptimizer(Optimizer):
 
             """
 
-            return self._compute_potential_from_posmat(
+            return self._compute_mean_square_error(
                 x, args[0], args[1]
             )
 
@@ -369,11 +333,18 @@ class ScipyOptimizer(Optimizer):
         print(opt_result['message'])
         # Update position matrix.
         new_position_matrix = opt_result['x'].reshape((-1, 3))
-        mol = mol.with_position_matrix(new_position_matrix)
-        print('final', self._compute_potential_from_posmat(
-            mol.get_position_matrix(),
+        decomposed_mol = (
+            decomposed_mol.with_position_matrix(new_position_matrix)
+        )
+        print('final', self._compute_mean_square_error(
+            decomposed_mol.get_position_matrix(),
             bond_targets,
             angle_targets,
         ))
+        decomposed_mol.write_pdb_file('finallol.pdb')
+
+        mol = decomposed_mol.recompose_molecule(molecule=mol)
+        import sys
+        sys.exit()
 
         return mol, result

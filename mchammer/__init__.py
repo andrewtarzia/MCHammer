@@ -1,6 +1,7 @@
 from .optimizer import *  # noqa
 from .collapser import *  # noqa
 from .molecule import *  # noqa
+from .decomposed_molecule import *  # noqa
 from .atom import *  # noqa
 from .bond import *  # noqa
 from .angle import *  # noqa

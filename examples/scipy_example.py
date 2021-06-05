@@ -42,32 +42,54 @@ def get_subunits(mol):
     return subunits
 
 
-# Building a cage from the examples on the stk docs.
+metal_centre = stk.BuildingBlock(
+    smiles='[Pd+2]',
+    functional_groups=(
+        stk.SingleAtom(stk.Pd(0, charge=2))
+        for i in range(4)
+    ),
+    position_matrix=[[0, 0, 0]],
+)
 bb1 = stk.BuildingBlock(
-    smiles='O=CC(C=O)C=O',
-    functional_groups=[stk.AldehydeFactory()],
+    smiles='C1=CC(=CC(=C1)C2=CC=NC=C2)C3=CC=NC=C3',
+    functional_groups=[stk.SmartsFunctionalGroupFactory(
+        smarts='[#6]~[#7X2]~[#6]',
+        bonders=(1, ),
+        deleters=(),
+    )],
 )
 bb2 = stk.BuildingBlock(
-    smiles='O=CC(Cl)(C=O)C=O',
-    functional_groups=[stk.AldehydeFactory()],
+    smiles=(
+        'c1cc(cc(c1)C#Cc2ccc(cc2)c3cccc4ccncc34)C#Cc5ccc(cc5)'
+        'c6cccc7ccncc67'
+    ),
+    functional_groups=[stk.SmartsFunctionalGroupFactory(
+        smarts='[#6]~[#7X2]~[#6]',
+        bonders=(1, ),
+        deleters=(),
+    )],
 )
-bb3 = stk.BuildingBlock('NCCN', [stk.PrimaryAminoFactory()])
-bb5 = stk.BuildingBlock('NCCCCN', [stk.PrimaryAminoFactory()])
 
 cage = stk.ConstructedMolecule(
-    topology_graph=stk.cage.FourPlusSix(
-        # building_blocks is now a dict, which maps building
-        # blocks to the id of the vertices it should be placed
-        # on. You can use ranges to specify the ids.
+    stk.cage.M2L4Lantern(
         building_blocks={
-            bb1: range(2),
-            bb2: (2, 3),
-            bb3: 4,
-            bb5: range(5, 10),
+            metal_centre: (0, 1),
+            bb1: (4, 5),
+            bb2: (2, 3)
         },
-    ),
+        reaction_factory=stk.DativeReactionFactory(
+            stk.GenericReactionFactory(
+                bond_orders={
+                    frozenset({
+                        stk.GenericFunctionalGroup,
+                        stk.SingleAtom
+                    }): 9
+                }
+            )
+        ),
+    )
 )
-cage.write('poc2.mol')
+cage.write('moc.mol')
 stk_long_bond_ids = get_long_bond_ids(cage)
 mch_mol = mch.Molecule(
     atoms=(
@@ -88,10 +110,10 @@ mch_mol = mch.Molecule(
     position_matrix=cage.get_position_matrix(),
 )
 
-target_bond_length = 1.2
+target_bond_length = 2.0
 optimizer = mch.ScipyOptimizer(
     target_bond_length=target_bond_length,
-    num_steps=100,
+    num_steps=50,
 )
 
 # Just get final step.
@@ -100,4 +122,4 @@ mch_mol, mch_result = optimizer.get_result(
     bond_pair_ids=stk_long_bond_ids,
 )
 cage = cage.with_position_matrix(mch_mol.get_position_matrix())
-cage.write('poc2_scipy_opt.mol')
+cage.write('moc_scipy_opt.mol')
