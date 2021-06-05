@@ -113,6 +113,71 @@ class Molecule:
         with open(path, 'w') as f:
             f.write(''.join(content))
 
+    def _write_pdb_content(self):
+        """
+        Write basic `.pdb` file content of Molecule.
+
+        """
+
+        content = []
+        atom_counts = {}
+        hetatm = 'HETATM'
+        alt_loc = ''
+        res_name = 'UNL'
+        chain_id = ''
+        res_seq = '1'
+        i_code = ''
+        occupancy = '1.00'
+        temp_factor = '0.00'
+
+        coords = self.get_position_matrix()
+        # This set will be used by bonds.
+        atoms = set()
+        for i, atom in enumerate(self.get_atoms(), 1):
+            x, y, z = (i for i in coords[atom.get_id()])
+            atom_id = atom.get_id()
+            atoms.add(atom_id)
+            serial = atom_id+1
+            element = atom.get_element_string()
+            charge = 0
+            atom_counts[element] = atom_counts.get(element, 0) + 1
+            name = f'{element}{atom_counts[element]}'
+
+            content.append(
+                f'{hetatm:<6}{serial:>5} {name:<4}'
+                f'{alt_loc:<1}{res_name:<3} {chain_id:<1}'
+                f'{res_seq:>4}{i_code:<1}   '
+                f' {x:>7.3f} {y:>7.3f} {z:>7.3f}'
+                f'{occupancy:>6}{temp_factor:>6}          '
+                f'{element:>2}{charge:>2}\n'
+            )
+
+        conect = 'CONECT'
+        for bond in self.get_bonds():
+            a1 = bond.get_atom1_id()
+            a2 = bond.get_atom2_id()
+            if a1 in atoms and a2 in atoms:
+                content.append(
+                    f'{conect:<6}{a1+1:>5}{a2+1:>5}               \n'
+                )
+
+        content.append('END\n')
+
+        return content
+
+    def write_pdb_file(self, path):
+        """
+        Write basic `.pdb` file of Molecule to `path`.
+
+        Connectivity is not maintained in this file type!
+
+        """
+
+        content = self._write_pdb_content()
+
+        with open(path, 'w') as f:
+            f.write(''.join(content))
+
     def get_atoms(self):
         """
         Yield the atoms in the molecule, ordered as input.
@@ -282,7 +347,7 @@ class Molecule:
 
         """
 
-        mol_graph = self.get_nx_graph(bond_pair_ids)
+        mol_graph = self.get_nx_graph(bond_pair_ids=bond_pair_ids)
 
         # Get atom ids in disconnected subgraphs.
         subunits = {
