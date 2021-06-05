@@ -11,10 +11,10 @@ def get_long_bond_ids(mol):
     long_bond_ids = []
     for bond_infos in mol.get_bond_infos():
         if bond_infos.get_building_block() is None:
-            ids = (
+            ids = tuple(sorted([
                 bond_infos.get_bond().get_atom1().get_id(),
                 bond_infos.get_bond().get_atom2().get_id(),
-            )
+            ]))
             long_bond_ids.append(ids)
 
     return tuple(long_bond_ids)
