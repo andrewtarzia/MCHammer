@@ -288,13 +288,13 @@ class ScipyOptimizer(Optimizer):
 
         result = Result(start_time=time.time())
 
+        mol_subunits = mol.get_subunits(bond_pair_ids)
         decomposed_mol = DecomposedMolecule.decompose_molecule(
             molecule=mol,
             bond_pair_ids=bond_pair_ids,
+            subunits=mol_subunits,
         )
         decomposed_bond_pair_ids = decomposed_mol.get_bond_pair_ids()
-
-        decomposed_mol.write_pdb_file('decomp.pdb')
 
         bond_targets = self._get_bond_targets(
             mol=decomposed_mol,
@@ -341,10 +341,9 @@ class ScipyOptimizer(Optimizer):
             bond_targets,
             angle_targets,
         ))
-        decomposed_mol.write_pdb_file('finallol.pdb')
 
-        mol = decomposed_mol.recompose_molecule(molecule=mol)
-        import sys
-        sys.exit()
-
+        mol = decomposed_mol.recompose_molecule(
+            molecule=mol,
+            subunits=mol_subunits,
+        )
         return mol, result

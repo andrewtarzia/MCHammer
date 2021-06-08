@@ -61,7 +61,7 @@ class DecomposedMolecule(Molecule):
         self._decomp_bond_pair_ids = decomp_bond_pair_ids
 
     @classmethod
-    def decompose_molecule(cls, molecule, bond_pair_ids):
+    def decompose_molecule(cls, molecule, bond_pair_ids, subunits):
         """
         Get decomposition of molecule.
 
@@ -70,8 +70,6 @@ class DecomposedMolecule(Molecule):
             2) Bonds between subunits.
 
         """
-
-        subunits = molecule.get_subunits(bond_pair_ids)
 
         atoms = []
         bonds = []
@@ -109,7 +107,7 @@ class DecomposedMolecule(Molecule):
                     decomp_a1_id = translation_dict[
                         (atom_id, 'bonder')
                     ]
-                    # Do not need to atom.
+                    # Do not need to add atom.
                 except KeyError:
                     raise NotImplementedError(
                         'Cannot handle the case where a single atom'
@@ -183,13 +181,46 @@ class DecomposedMolecule(Molecule):
     def get_bond_pair_ids(self):
         return self._decomp_bond_pair_ids
 
-    def recompose_molecule(self, molecule):
+    def recompose_molecule(self, molecule, subunits):
         """
         Return recomposed molecule.
 
         """
 
-        print(self._translation_dict)
-        raise NotImplementedError()
+        new_position_matrix = molecule.get_position_matrix()
 
-        return molecule
+        # Put molecule at same centroid as decomposed molecule.
+        centroid = molecule.get_centroid()
+        d_centroid = self.get_centroid()
+        translation_vector = d_centroid - centroid
+        new_position_matrix += translation_vector
+        molecule = molecule.with_position_matrix(new_position_matrix)
+        # Align equivalent vectors and positions from decomposed
+        # subunits to subunits.
+        for su in subunits:
+            # Subunit centroids.
+            # Change position matrix to place centroid at decomposed
+            # centroid.
+            subunit = subunits[su]
+            centroid = molecule.get_centroid(subunit)
+            if len(subunit) == 1:
+                d_subunit = self._translation_dict[
+                    (tuple(subunits[su])[0], 'bonder')
+                ]
+            else:
+                d_subunit = self._translation_dict[(su, 'subunit')]
+
+
+            d_centroid = self.get_centroid(d_subunit)
+            translation_vector = d_centroid - centroid
+            for i in molecule.get_atoms():
+                if i.get_id() in subunit:
+                    new_position_matrix[i.get_id()] += (
+                        translation_vector
+                    )
+            if len(subunit) == 1:
+                pass
+            else:
+                pass
+
+        return molecule.with_position_matrix(new_position_matrix)
