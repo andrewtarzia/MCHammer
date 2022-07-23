@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="MCHammer",
-    version="1.0.4",
+    version="1.0.5",
     author="Andrew Tarzia",
     author_email="andrew.tarzia@gmail.com",
     description="Contains MC algorithm for optimising molecules.",
