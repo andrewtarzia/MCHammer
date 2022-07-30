@@ -278,6 +278,55 @@ class Molecule:
 
         return subunits
 
+    def get_subunit_molecules(self, bond_pair_ids):
+        """
+        Get connected graphs based on Molecule separated by bonds.
+
+        Parameters
+        ----------
+        bond_pair_ids :
+            :class:`iterable` of :class:`tuple` of :class:`ints`
+            Iterable of pairs of atom ids with bond between them to
+            optimize.
+
+        Returns
+        -------
+        subunit_molecules : :class:`.dict`
+            The subunits of `mol` split by bonds defined by
+            `bond_pair_ids`. Key is subunit identifier, Value is
+            :class:`mch.Molecule`.
+
+        """
+
+        # Produce a graph from the molecule that does not include edges
+        # where the bonds to be optimized are.
+        mol_graph = nx.Graph()
+        for atom in self.get_atoms():
+            mol_graph.add_node(atom.get_id())
+
+        # Add edges.
+        for bond in self.get_bonds():
+            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
+            if pair_ids not in bond_pair_ids:
+                mol_graph.add_edge(*pair_ids)
+
+        # Get atom ids in disconnected subgraphs.
+        subunits = {}
+        for i, c in enumerate(nx.connected_components(mol_graph)):
+            c_ids = sorted(c)
+            in_atoms = [
+                i for i in self._atoms
+                if i.get_id() in c
+            ]
+            in_bonds = [
+                i for i in self._bonds
+                if i.get_atom1_id() in c and i.get_atom2_id() in c
+            ]
+            new_pos_matrix = self._position_matrix[:, list(c_ids)].T
+            subunits[i] = Molecule(in_atoms, in_bonds, new_pos_matrix)
+
+        return subunits
+
     def __str__(self):
         return repr(self)
 
