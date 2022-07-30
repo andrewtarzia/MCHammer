@@ -175,23 +175,20 @@ class MchPotential(Potential):
         return nonbonded_potential
 
     def compute_potential(self, molecule, bond_pair_ids):
-        position_matrix = molecule.get_position_matrix()
-        raise SystemExit('use single distance evaluiation for all of this!')
+        subunits = molecule.get_subunit_molecules(bond_pair_ids)
         component_position_matrices = (
-            i.get_position_matrix()
-            for i in molecule.get_components()
+            subunits[i].get_position_matrix()
+            for i in subunits
         )
         component_radii = (
-            tuple(j.get_radius() for j in i.get_atoms())
-            for i in molecule.get_components()
+            tuple(j.get_radius() for j in subunits[i].get_atoms())
+            for i in molecule.get_subunits(bond_pair_ids)
         )
-        return self._compute_nonbonded_potential(
+        nonbonded_potential = self._compute_nonbonded_potential(
             position_matrices=component_position_matrices,
             radii=component_radii,
         )
-        nonbonded_potential = self._compute_nonbonded_potential(
-            position_matrix=position_matrix,
-        )
+        position_matrix = molecule.get_position_matrix()
         system_potential = nonbonded_potential
         for bond in bond_pair_ids:
             system_potential += self._bond_potential(
