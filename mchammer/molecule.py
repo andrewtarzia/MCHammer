@@ -18,7 +18,13 @@ class Molecule:
 
     """
 
-    def __init__(self, atoms, bonds, position_matrix):
+    def __init__(
+        self,
+        atoms,
+        bonds,
+        position_matrix,
+        subunit_factories=None,
+    ):
         """
         Initialize a :class:`Molecule` instance.
 
@@ -34,6 +40,8 @@ class Molecule:
             A ``(n, 3)`` matrix holding the position of every atom in
             the :class:`.Molecule`.
 
+        subunit_factories
+
         """
 
         self._atoms = tuple(atoms)
@@ -42,6 +50,7 @@ class Molecule:
             position_matrix.T,
             dtype=np.float64,
         )
+        self._subunit_factories = subunit_factories
 
     def get_position_matrix(self):
         """

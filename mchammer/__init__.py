@@ -7,3 +7,4 @@ from .utilities import *  # noqa
 from .results import *  # noqa
 from .potential import *  # noqa
 from .radii import *  # noqa
+from .factory import *  # noqa
