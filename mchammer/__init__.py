@@ -5,3 +5,5 @@ from .atom import *  # noqa
 from .bond import *  # noqa
 from .utilities import *  # noqa
 from .results import *  # noqa
+from .potential import *  # noqa
+from .radii import *  # noqa

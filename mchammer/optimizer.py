@@ -15,7 +15,8 @@ from scipy.spatial.distance import pdist
 from copy import deepcopy
 import random
 
-from .results import Result, MCStepResult
+from .results import MCStepResult, Result
+from .potential import MchPotential
 from .utilities import get_atom_distance
 
 
@@ -31,12 +32,8 @@ class Optimizer:
     def __init__(
         self,
         step_size,
-        target_bond_length,
         num_steps,
-        bond_epsilon=50,
-        nonbond_epsilon=20,
-        nonbond_sigma=1.2,
-        nonbond_mu=3,
+        potential_function=MchPotential(),
         beta=2,
         random_seed=1000,
     ):
@@ -48,31 +45,12 @@ class Optimizer:
         step_size : :class:`float`
             The relative size of the step to take during step.
 
-        target_bond_length : :class:`float`
-            Target equilibrium bond length for long bonds to minimize
-            to.
-
         num_steps : :class:`int`
             Number of MC moves to perform.
 
-        bond_epsilon : :class:`float`, optional
-            Value of epsilon used in the bond potential in MC moves.
-            Determines strength of the bond potential.
-            Defaults to 50.
-
-        nonbond_epsilon : :class:`float`, optional
-            Value of epsilon used in the nonbond potential in MC moves.
-            Determines strength of the nonbond potential.
-            Defaults to 20.
-
-        nonbond_sigma : :class:`float`, optional
-            Value of sigma used in the nonbond potential in MC moves.
-            Defaults to 1.2.
-
-        nonbond_mu : :class:`float`, optional
-            Value of mu used in the nonbond potential in MC moves.
-            Determines the steepness of the nonbond potential.
-            Defaults to 3.
+        potential_function : :class:`spd.Potential`
+            Function to calculate potential energy of a
+            :class:`spd.Supramolecule`
 
         beta : :class:`float`, optional
             Value of beta used in the in MC moves. Beta takes the
@@ -87,12 +65,8 @@ class Optimizer:
         """
 
         self._step_size = step_size
-        self._target_bond_length = target_bond_length
         self._num_steps = num_steps
-        self._bond_epsilon = bond_epsilon
-        self._nonbond_epsilon = nonbond_epsilon
-        self._nonbond_sigma = nonbond_sigma
-        self._nonbond_mu = nonbond_mu
+        self._potential_function = potential_function
         self._beta = beta
         if random_seed is None:
             random.seed()
@@ -100,69 +74,6 @@ class Optimizer:
         else:
             random.seed(random_seed)
             np.random.seed(random_seed)
-
-    def _get_bond_vector(self, position_matrix, bond_pair):
-        """
-        Get vector from atom1 to atom2 in bond.
-
-        """
-
-        atom1_pos = position_matrix[bond_pair[0]]
-        atom2_pos = position_matrix[bond_pair[1]]
-        return atom2_pos - atom1_pos
-
-    def _bond_potential(self, distance):
-        """
-        Define an arbitrary parabolic bond potential.
-
-        This potential has no relation to an empircal forcefield.
-
-        """
-
-        potential = (distance - self._target_bond_length) ** 2
-        potential = self._bond_epsilon * potential
-
-        return potential
-
-    def _nonbond_potential(self, distance):
-        """
-        Define an arbitrary repulsive nonbonded potential.
-
-        This potential has no relation to an empircal forcefield.
-
-        """
-
-        return (
-            self._nonbond_epsilon * (
-                (self._nonbond_sigma/distance) ** self._nonbond_mu
-            )
-        )
-
-    def _compute_nonbonded_potential(self, position_matrix):
-        # Get all pairwise distances between atoms in each subunut.
-        pair_dists = pdist(position_matrix)
-        nonbonded_potential = np.sum(
-            self._nonbond_potential(pair_dists)
-        )
-
-        return nonbonded_potential
-
-    def _compute_potential(self, mol, bond_pair_ids):
-        position_matrix = mol.get_position_matrix()
-        nonbonded_potential = self._compute_nonbonded_potential(
-            position_matrix=position_matrix,
-        )
-        system_potential = nonbonded_potential
-        for bond in bond_pair_ids:
-            system_potential += self._bond_potential(
-                distance=get_atom_distance(
-                    position_matrix=position_matrix,
-                    atom1_id=bond[0],
-                    atom2_id=bond[1],
-                )
-            )
-
-        return system_potential, nonbonded_potential
 
     def _translate_atoms_along_vector(self, mol, atom_ids, vector):
 
@@ -200,12 +111,11 @@ class Optimizer:
             '                                                    \n'
             'Settings:                                           \n'
             f' step size = {self._step_size} \n'
-            f' target bond length = {self._target_bond_length} \n'
+            f' target bond length = {self._potential_function.get_target_bond_length()} \n'
             f' num. steps = {self._num_steps} \n'
-            f' bond epsilon = {self._bond_epsilon} \n'
-            f' nonbond epsilon = {self._nonbond_epsilon} \n'
-            f' nonbond sigma = {self._nonbond_sigma} \n'
-            f' nonbond mu = {self._nonbond_mu} \n'
+            f' bond epsilon = {self._potential_function.get_bond_epsilon()} \n'
+            f' nonbond epsilon = {self._potential_function.get_nonbond_epsilon()} \n'
+            f' nonbond mu = {self._potential_function.get_nonbond_mu()} \n'
             f' beta = {self._beta} \n'
             '====================================================\n\n'
         )
@@ -220,9 +130,9 @@ class Optimizer:
     ):
 
         system_potential, nonbonded_potential = (
-            self._compute_potential(
-                mol=mol,
-                bond_pair_ids=bond_pair_ids
+            self._potential_function.compute_potential(
+                molecule=mol,
+                bond_pair_ids=bond_pair_ids,
             )
         )
 
@@ -265,8 +175,9 @@ class Optimizer:
 
         position_matrix = mol.get_position_matrix()
 
+        raise SystemExit('This requires the substructures (rename) defined')
         # Randomly select a bond to optimize from bonds.
-        bond_ids = random.choice(bond_pair_ids)
+        substructure_id = random.choice(substructures)
         bond_vector = self._get_bond_vector(
             position_matrix=position_matrix,
             bond_pair=bond_ids
@@ -478,6 +389,23 @@ class Optimizer:
             The result of the final optimization step.
 
         """
+
+        raise SystemExit('Actually no, the molecule class should take the subcomponentFactory')
+        raise SystemExit('the subcomponent (created by factory) should carry potential information - starting with just angles.')
+        raise SystemExit('new interface should require subcomponent (rename) factories and rotatable bond finding flag')
+        raise SystemExit('remove bond pair ids and subunits approach')
+        raise SystemExit('reinstate rotation options')
+
+        if self._use_rotatable_bonds:
+            raise SystemExit('rename')
+            subcomponents = mol.get_rotatable_bonds()
+
+        subcomponents = mol.get_subcompeonts()
+
+        raise SystemExit('add new potential classes liek spindry')
+        potential = self._potential_function(molecule)
+        system_potential = potential.get_system_potential()
+        nonbonded_potential = potential.get_nonbonded_potential()
 
         mol, step_result = self._run_first_step(
             mol,
