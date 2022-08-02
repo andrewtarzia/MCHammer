@@ -37,6 +37,20 @@ periodic_table = {
 }
 
 
+def get_atom_angle(position_matrix, atom_ids):
+    """
+    Get angle between atom1-atom2 and atom2-atom3.
+
+    """
+
+    atom1_pos = position_matrix[atom_ids[0]]
+    atom2_pos = position_matrix[atom_ids[1]]
+    atom3_pos = position_matrix[atom_ids[2]]
+    v1 = atom1_pos - atom2_pos
+    v2 = atom3_pos - atom2_pos
+    return np.degrees(vector_angle(v1, v2))
+
+
 def get_atom_distance(position_matrix, atom1_id, atom2_id):
     """
     Return the distance between two atoms.

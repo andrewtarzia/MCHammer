@@ -9,7 +9,7 @@ Substructure
 import numpy as np
 
 from .moves import Translation, RotationAboutAxis
-from .utilities import vector_angle
+from .utilities import get_atom_angle
 
 
 class Substructure:
@@ -195,26 +195,14 @@ class AngleSubstructure(Substructure):
 
         """
 
-        angle = self._get_angle(
+        angle = get_atom_angle(
             position_matrix=position_matrix,
+            atom_ids=self._atom_ids,
         )
 
         potential = (angle - self._target) ** 2
         potential = epsilon * potential
         return potential
-
-    def _get_angle(self, position_matrix):
-        """
-        Get angle between atom1-atom2 and atom2-atom3.
-
-        """
-
-        atom1_pos = position_matrix[self._atom_ids[0]]
-        atom2_pos = position_matrix[self._atom_ids[1]]
-        atom3_pos = position_matrix[self._atom_ids[2]]
-        v1 = atom1_pos - atom2_pos
-        v2 = atom3_pos - atom2_pos
-        return np.degrees(vector_angle(v1, v2))
 
     def get_move(
         self,
@@ -229,8 +217,9 @@ class AngleSubstructure(Substructure):
 
         """
 
-        angle = self._get_angle(
+        angle = get_atom_angle(
             position_matrix=position_matrix,
+            atom_ids=self._atom_ids,
         )
         angle_diff = self._target - angle
         rotation_angle = angle_diff * multiplier
