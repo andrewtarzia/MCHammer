@@ -15,7 +15,7 @@ class Bond:
 
     """
 
-    def __init__(self, id, atom_ids):
+    def __init__(self, id, atom_ids, order):
         """
         Initialize a :class:`Bond` instance.
 
@@ -25,15 +25,19 @@ class Bond:
             ID to be assigned to bond.
 
         atom_ids : :class:`iterable` of :class:`int`
-            IDs of atom 1 and atom 2 in bond, where atom 1 is always
-            the smaller number and the IDs cannot be the same.
+            IDs of atom 1 and atom 2 in bond, where the IDs cannot be
+            the same.
+
+        order :
 
         """
 
         self._id = id
         if len(set(atom_ids)) == 0:
             raise ValueError('Two distict atom ids are required.')
-        self._atom1_id, self._atom2_id = sorted(atom_ids)
+
+        self._atom1_id, self._atom2_id = atom_ids
+        self._order = order
 
     def get_id(self):
         """
@@ -59,6 +63,14 @@ class Bond:
 
         return self._atom2_id
 
+    def get_order(self):
+        """
+        Get bond order.
+
+        """
+
+        return self._order
+
     def __str__(self):
         return repr(self)
 
@@ -66,5 +78,6 @@ class Bond:
         return (
             f'{self.__class__.__name__}(id={self.get_id()}, '
             f'atom1_id={self.get_atom1_id()}, '
-            f'atom2_id={self.get_atom2_id()})'
+            f'atom2_id={self.get_atom2_id()}, '
+            f'order={self.get_order()})'
         )

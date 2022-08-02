@@ -142,6 +142,10 @@ class Molecule:
             mol.AddBond(
                 beginAtomIdx=bond.get_atom1_id(),
                 endAtomIdx=bond.get_atom2_id(),
+                order=(
+                    rdkit.BondType.DATIVE if bond.get_order() == 9
+                    else rdkit.BondType(bond.get_order())
+                ),
             )
 
         mol = mol.GetMol()

@@ -241,7 +241,6 @@ class Optimizer:
         new_system_potential, new_nonbonded_potential = (
             self._potential_function.compute_potential(mol)
         )
-        print(new_system_potential-system_potential)
 
         if self._test_move(system_potential, new_system_potential):
             updated = 'T'
