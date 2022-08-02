@@ -11,13 +11,11 @@ Optimizer for minimising intermolecular distances.
 import numpy as np
 import time
 
-from scipy.spatial.distance import pdist
-from copy import deepcopy
 import random
 
 from .results import MCStepResult, Result
 from .potential import MchPotential
-from .utilities import get_atom_distance
+from .moves import Translation
 
 
 class Optimizer:
@@ -75,18 +73,6 @@ class Optimizer:
             random.seed(random_seed)
             np.random.seed(random_seed)
 
-    def _translate_atoms_along_vector(self, mol, atom_ids, vector):
-
-        new_position_matrix = deepcopy(mol.get_position_matrix())
-        for atom in mol.get_atoms():
-            if atom.get_id() not in atom_ids:
-                continue
-            pos = mol.get_position_matrix()[atom.get_id()]
-            new_position_matrix[atom.get_id()] = pos - vector
-
-        mol = mol.with_position_matrix(new_position_matrix)
-        return mol
-
     def _test_move(self, curr_pot, new_pot):
 
         if new_pot < curr_pot:
@@ -122,41 +108,23 @@ class Optimizer:
 
         return string
 
-    def _run_first_step(
-        self,
-        mol,
-        bond_pair_ids,
-        subunits,
-    ):
+    def _run_first_step(self, mol):
 
         system_potential, nonbonded_potential = (
-            self._potential_function.compute_potential(
-                molecule=mol,
-                bond_pair_ids=bond_pair_ids,
-            )
+            self._potential_function.compute_potential(mol)
         )
 
         # Update properties at each step.
-        max_bond_distance = max([
-            get_atom_distance(
-                position_matrix=mol.get_position_matrix(),
-                atom1_id=bond[0],
-                atom2_id=bond[1],
-            )
-            for bond in bond_pair_ids
-        ])
         step_result = MCStepResult(
             step=0,
             position_matrix=mol.get_position_matrix(),
             passed=None,
             system_potential=system_potential,
             nonbonded_potential=nonbonded_potential,
-            max_bond_distance=max_bond_distance,
             log=(
                 f"{0} "
                 f"{system_potential} "
                 f"{nonbonded_potential} "
-                f"{max_bond_distance} "
                 '-- --\n'
             ),
         )
@@ -166,70 +134,72 @@ class Optimizer:
     def _run_step(
         self,
         mol,
-        bond_pair_ids,
-        subunits,
         step,
         system_potential,
         nonbonded_potential,
     ):
 
         position_matrix = mol.get_position_matrix()
+        subunits = mol.get_subunits()
+        substructures = tuple(mol.get_substructures())
 
-        raise SystemExit('This requires the substructures (rename) defined')
-        # Randomly select a bond to optimize from bonds.
-        substructure_id = random.choice(substructures)
-        bond_vector = self._get_bond_vector(
-            position_matrix=position_matrix,
-            bond_pair=bond_ids
-        )
+        # Define potential moves.
+        potential_moves = ('com_translation', 'substructure_move')
+        print(potential_moves)
+        chosen_move = random.choice(potential_moves)
+        print(chosen_move)
 
-        # Get subunits connected by selected bonds.
-        subunit_1 = [
-            i for i in subunits if bond_ids[0] in subunits[i]
-        ][0]
-        subunit_2 = [
-            i for i in subunits if bond_ids[1] in subunits[i]
-        ][0]
+        if chosen_move == 'substructure_move':
+            print(chosen_move, 2)
+            # Randomly select a substructure to optimize from bonds.
+            random_substructure = random.choice(substructures)
+            print(random_substructure)
+            substructure_ids = tuple(random_substructure.get_atom_ids())
 
-        # Choose subunit to move out of the two connected by the
-        # bond randomly.
-        moving_su = random.choice([subunit_1, subunit_2])
-        moving_su_atom_ids = tuple(i for i in subunits[moving_su])
+            # Get subunits connected by selected bonds.
+            subunit_1 = [
+                i
+                for i in subunits if substructure_ids[0] in subunits[i]
+            ][0]
+            subunit_2 = [
+                i
+                for i in subunits if substructure_ids[1] in subunits[i]
+            ][0]
+            # Choose subunit to move out of the two connected by the
+            # bond randomly.
+            moving_su = random.choice([subunit_1, subunit_2])
+            moving_su_atom_ids = tuple(i for i in subunits[moving_su])
+            # Random number from -1 to 1 for multiplying translation.
+            rand = (random.random() - 0.5) * 2
+            test_move = random_substructure.get_move(
+                position_matrix=position_matrix,
+                multiplier=self._step_size * rand,
+                movable_atom_ids=moving_su_atom_ids,
+            )
 
-        # Random number from -1 to 1 for multiplying translation.
-        rand = (random.random() - 0.5) * 2
-        # Define translation along long bond vector where
-        # direction is from force, magnitude is randomly
-        # scaled.
-        bond_translation = -bond_vector * self._step_size * rand
+        elif chosen_move == 'com_translation':
+            print(chosen_move, 1)
+            # Choose a random subunit.
+            moving_su_atom_ids = tuple(random.choice(subunits))
+            # Define molecule centroid.
+            cent = mol.get_centroid()
+            su_cent_vector = (
+                mol.get_centroid(atom_ids=moving_su_atom_ids)-cent
+            )
+            # Random number from -1 to 1 for multiplying translation.
+            rand = (random.random() - 0.5) * 2
+            test_move = Translation(
+                vector=su_cent_vector * self._step_size * rand,
+                movable_atom_ids=moving_su_atom_ids,
+            )
 
-        # Define subunit COM vector to molecule COM.
-        cent = mol.get_centroid()
-        su_cent_vector = (
-            mol.get_centroid(atom_ids=moving_su_atom_ids)-cent
-        )
-        com_translation = su_cent_vector * self._step_size * rand
+        print(test_move)
 
-        # Randomly choose between translation along long bond
-        # vector or along BB-COM vector.
-        translation_vector = random.choice([
-            bond_translation,
-            com_translation,
-        ])
-
-        # Translate building block.
-        # Update atom position of building block.
-        mol = self._translate_atoms_along_vector(
-            mol=mol,
-            atom_ids=moving_su_atom_ids,
-            vector=translation_vector,
-        )
+        # Perform move.
+        mol = test_move.perform_move(mol)
 
         new_system_potential, new_nonbonded_potential = (
-            self._compute_potential(
-                mol=mol,
-                bond_pair_ids=bond_pair_ids
-            )
+            self._potential_function.compute_potential(mol)
         )
 
         if self._test_move(system_potential, new_system_potential):
@@ -241,40 +211,26 @@ class Optimizer:
             updated = 'F'
             passed = False
             # Reverse move.
-            mol = self._translate_atoms_along_vector(
-                mol=mol,
-                atom_ids=moving_su_atom_ids,
-                vector=-translation_vector,
-            )
+            mol = test_move.reverse_move(mol)
 
         # Update properties at each step.
-        max_bond_distance = max([
-            get_atom_distance(
-                position_matrix=mol.get_position_matrix(),
-                atom1_id=bond[0],
-                atom2_id=bond[1],
-            )
-            for bond in bond_pair_ids
-        ])
         step_result = MCStepResult(
             step=step,
             position_matrix=mol.get_position_matrix(),
             passed=passed,
             system_potential=system_potential,
             nonbonded_potential=nonbonded_potential,
-            max_bond_distance=max_bond_distance,
             log=(
                 f"{step} "
                 f"{system_potential} "
                 f"{nonbonded_potential} "
-                f"{max_bond_distance} "
-                f'{bond_ids} {updated}\n'
+                f'{updated}\n'
             ),
         )
 
         return mol, step_result
 
-    def get_trajectory(self, mol, bond_pair_ids, subunits):
+    def get_trajectory(self, mol):
         """
         Get trajectory of optimization run on `mol`.
 
@@ -282,16 +238,6 @@ class Optimizer:
         ----------
         mol : :class:`.Molecule`
             The molecule to be optimized.
-
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
-
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
 
         Returns
         -------
@@ -302,12 +248,15 @@ class Optimizer:
             The result of the optimization including all steps.
 
         """
+        subunits = mol.get_subunits()
+        substructures = tuple(mol.get_substructures())
 
         result = Result(start_time=time.time())
 
         result.update_log(self._output_top_lines())
         result.update_log(
-            f'There are {len(bond_pair_ids)} bonds to optimize.\n'
+            f'There are {len(substructures)} substructures to'
+            f' optimize.\n'
         )
         result.update_log(
             f'There are {len(subunits)} sub units with N atoms:\n'
@@ -322,11 +271,7 @@ class Optimizer:
             'step system_potential nonbond_potential max_dist '
             'opt_bbs updated?\n'
         )
-        mol, step_result = self._run_first_step(
-            mol,
-            bond_pair_ids,
-            subunits,
-        )
+        mol, step_result = self._run_first_step(mol=mol)
         system_potential = step_result.get_system_potential()
         nonbonded_potential = step_result.get_nonbonded_potential()
         result.add_step_result(step_result=step_result)
@@ -334,8 +279,6 @@ class Optimizer:
         for step in range(1, self._num_steps):
             mol, step_result = self._run_step(
                 mol=mol,
-                bond_pair_ids=bond_pair_ids,
-                subunits=subunits,
                 step=step,
                 system_potential=system_potential,
                 nonbonded_potential=nonbonded_potential,
@@ -361,7 +304,7 @@ class Optimizer:
 
         return mol, result
 
-    def get_result(self, mol, bond_pair_ids, subunits):
+    def get_result(self, mol):
         """
         Get final result of optimization run on `mol`.
 
@@ -369,16 +312,6 @@ class Optimizer:
         ----------
         mol : :class:`.Molecule`
             The molecule to be optimized.
-
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
-
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
 
         Returns
         -------
@@ -389,37 +322,16 @@ class Optimizer:
             The result of the final optimization step.
 
         """
+        print('add angular terms')
+        print('reinstate rotation options')
 
-        raise SystemExit('Actually no, the molecule class should take the subcomponentFactory')
-        raise SystemExit('the subcomponent (created by factory) should carry potential information - starting with just angles.')
-        raise SystemExit('new interface should require subcomponent (rename) factories and rotatable bond finding flag')
-        raise SystemExit('remove bond pair ids and subunits approach')
-        raise SystemExit('reinstate rotation options')
-
-        if self._use_rotatable_bonds:
-            raise SystemExit('rename')
-            subcomponents = mol.get_rotatable_bonds()
-
-        subcomponents = mol.get_subcompeonts()
-
-        raise SystemExit('add new potential classes liek spindry')
-        potential = self._potential_function(molecule)
-        system_potential = potential.get_system_potential()
-        nonbonded_potential = potential.get_nonbonded_potential()
-
-        mol, step_result = self._run_first_step(
-            mol,
-            bond_pair_ids,
-            subunits,
-        )
+        mol, step_result = self._run_first_step(mol)
         system_potential = step_result.get_system_potential()
         nonbonded_potential = step_result.get_nonbonded_potential()
 
         for step in range(1, self._num_steps):
             mol, step_result = self._run_step(
                 mol=mol,
-                bond_pair_ids=bond_pair_ids,
-                subunits=subunits,
                 step=step,
                 system_potential=system_potential,
                 nonbonded_potential=nonbonded_potential,
