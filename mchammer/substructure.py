@@ -152,11 +152,9 @@ class BondSubstructure(Substructure):
         bond_vector = self._get_bond_vector(
             position_matrix=position_matrix,
         )
-        print(bond_vector)
         # Define translation along long bond vector where
         # direction is from force, magnitude is randomly
         # scaled.
         bond_translation = -bond_vector * multiplier
-        print(bond_translation)
 
         return Translation(bond_translation, movable_atom_ids)

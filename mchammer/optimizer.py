@@ -10,7 +10,7 @@ Optimizer for minimising intermolecular distances.
 
 import numpy as np
 import time
-
+from collections import Counter
 import random
 
 from .results import MCStepResult, Result
@@ -121,6 +121,7 @@ class Optimizer:
             passed=None,
             system_potential=system_potential,
             nonbonded_potential=nonbonded_potential,
+            chosen_move=None,
             log=(
                 f"{0} "
                 f"{system_potential} "
@@ -145,15 +146,11 @@ class Optimizer:
 
         # Define potential moves.
         potential_moves = ('com_translation', 'substructure_move')
-        print(potential_moves)
         chosen_move = random.choice(potential_moves)
-        print(chosen_move)
 
         if chosen_move == 'substructure_move':
-            print(chosen_move, 2)
             # Randomly select a substructure to optimize from bonds.
             random_substructure = random.choice(substructures)
-            print(random_substructure)
             substructure_ids = tuple(random_substructure.get_atom_ids())
 
             # Get subunits connected by selected bonds.
@@ -178,7 +175,6 @@ class Optimizer:
             )
 
         elif chosen_move == 'com_translation':
-            print(chosen_move, 1)
             # Choose a random subunit.
             moving_su_atom_ids = tuple(random.choice(subunits))
             # Define molecule centroid.
@@ -192,8 +188,6 @@ class Optimizer:
                 vector=su_cent_vector * self._step_size * rand,
                 movable_atom_ids=moving_su_atom_ids,
             )
-
-        print(test_move)
 
         # Perform move.
         mol = test_move.perform_move(mol)
@@ -220,11 +214,12 @@ class Optimizer:
             passed=passed,
             system_potential=system_potential,
             nonbonded_potential=nonbonded_potential,
+            chosen_move=chosen_move,
             log=(
                 f"{step} "
                 f"{system_potential} "
                 f"{nonbonded_potential} "
-                f'{updated}\n'
+                f'{chosen_move} {updated}\n'
             ),
         )
 
@@ -268,8 +263,8 @@ class Optimizer:
             '====================================================\n\n'
         )
         result.update_log(
-            'step system_potential nonbond_potential max_dist '
-            'opt_bbs updated?\n'
+            'step system_potential nonbond_potential '
+            'opt_bbs chosen_move updated?\n'
         )
         mol, step_result = self._run_first_step(mol=mol)
         system_potential = step_result.get_system_potential()
@@ -287,8 +282,10 @@ class Optimizer:
             system_potential = step_result.get_system_potential()
             nonbonded_potential = step_result.get_nonbonded_potential()
             result.add_step_result(step_result=step_result)
+            result.update_log(step_result.get_log())
 
         num_passed = result.get_number_passed()
+        move_types = result.get_all_chosen_moves()
         result.update_log(
             string=(
                 '\n============================================\n'
@@ -296,6 +293,9 @@ class Optimizer:
                 f'{num_passed} steps passed: '
                 f'{(num_passed/self._num_steps)*100}'
                 '%\n'
+                f'move types counter: '
+                f'{Counter(move_types)}'
+                '\n'
                 f'Total optimisation time: '
                 f'{round(result.get_timing(time.time()), 4)}s\n'
                 '============================================\n'

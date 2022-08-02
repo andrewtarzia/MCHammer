@@ -62,6 +62,7 @@ class MCStepResult(StepResult):
         passed,
         system_potential,
         nonbonded_potential,
+        chosen_move,
         log,
     ):
         """
@@ -86,20 +87,26 @@ class MCStepResult(StepResult):
         nonbonded_potential : :class:`float`
             Nonbonded potential of the structure after this step.
 
+        chosen_move : :class:`str`
+
         log : :class:`str`
             String log of this step.
 
         """
 
         self._step = step
-        self._log = ''
+        self._log = log
         self._position_matrix = position_matrix
         self._passed = passed
         self._system_potential = system_potential
         self._nonbonded_potential = nonbonded_potential
+        self._chosen_move = chosen_move
 
     def get_passed(self):
         return self._passed
+
+    def get_chosen_move(self):
+        return self._chosen_move
 
     def get_system_potential(self):
         return self._system_potential
@@ -170,6 +177,16 @@ class Result:
             1 for step in self._step_results
             if self._step_results[step].get_passed()
         ])
+
+    def get_all_chosen_moves(self):
+        """
+        Get all chosen moves.
+
+        """
+        return [
+            self._step_results[step].get_chosen_move()
+            for step in self._step_results
+        ]
 
     def get_final_position_matrix(self):
         """
