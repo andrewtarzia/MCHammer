@@ -24,7 +24,7 @@ class Molecule:
         atoms,
         bonds,
         position_matrix,
-        subunit_factories=None,
+        substructure_factories=(),
     ):
         """
         Initialize a :class:`Molecule` instance.
@@ -41,7 +41,8 @@ class Molecule:
             A ``(n, 3)`` matrix holding the position of every atom in
             the :class:`.Molecule`.
 
-        subunit_factories
+        substructure_factories
+
 
         """
 
@@ -51,6 +52,71 @@ class Molecule:
             position_matrix.T,
             dtype=np.float64,
         )
+        self._substructures = tuple(self._extract_substructures(
+            substructure_factories=substructure_factories,
+        ))
+        self._normalize_disconnectors()
+        self._get_subunits()
+
+    def _extract_substructures(self, substructure_factories):
+        """
+        Use substructure factories to define substructures.
+
+        """
+        for substructure in substructure_factories:
+            yield from substructure.get_substructures(self)
+
+    def _normalize_disconnectors(self):
+        """
+        Normalize disconnectors from substructures.
+
+        """
+        self._disconnectors = set()
+        for ss in self.get_substructures():
+            disconnectors = tuple(sorted(ss.get_disconnectors()))
+            ss_ids = ss.get_atom_ids()
+            in_molecule_ids = tuple(ss_ids[i] for i in disconnectors)
+            self._disconnectors.add(in_molecule_ids)
+
+    def get_disconnectors(self):
+        """
+        Return disconnector pairs in molecule.
+
+        """
+
+        return self._disconnectors
+
+    def _get_subunits(self):
+        """
+        Using substructures, define subunits.
+
+        """
+
+        # Produce a graph from the molecule that does not include edges
+        # where the bonds to be optimized are.
+        mol_graph = nx.Graph()
+        for atom in self.get_atoms():
+            mol_graph.add_node(atom.get_id())
+
+        # Add edges.
+        for bond in self.get_bonds():
+            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
+            if pair_ids not in self._disconnectors:
+                mol_graph.add_edge(*pair_ids)
+
+        # Get atom ids in disconnected subgraphs.
+        self._subunits = {
+            i: sg
+            for i, sg in enumerate(nx.connected_components(mol_graph))
+        }
+
+    def get_substructures(self):
+        """
+        Yield substructures.
+
+        """
+        for i in self._substructures:
+            yield i
 
     def to_rdkit_mol(self) -> rdkit.Mol:
         """
@@ -113,6 +179,9 @@ class Molecule:
             bonds=self._bonds,
             position_matrix=np.array(position_matrix),
         )
+        clone._subunits = self._subunits
+        clone._substructures = self._substructures
+        clone._disconnectors = self._disconnectors
         return clone
 
     def _write_xyz_content(self):
@@ -275,16 +344,9 @@ class Molecule:
             len(atom_ids)
         )
 
-    def get_subunits(self, bond_pair_ids):
+    def get_subunits(self):
         """
         Get connected graphs based on Molecule separated by bonds.
-
-        Parameters
-        ----------
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
 
         Returns
         -------
@@ -295,36 +357,11 @@ class Molecule:
 
         """
 
-        # Produce a graph from the molecule that does not include edges
-        # where the bonds to be optimized are.
-        mol_graph = nx.Graph()
-        for atom in self.get_atoms():
-            mol_graph.add_node(atom.get_id())
+        return self._subunits
 
-        # Add edges.
-        for bond in self.get_bonds():
-            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
-            if pair_ids not in bond_pair_ids:
-                mol_graph.add_edge(*pair_ids)
-
-        # Get atom ids in disconnected subgraphs.
-        subunits = {
-            i: sg
-            for i, sg in enumerate(nx.connected_components(mol_graph))
-        }
-
-        return subunits
-
-    def get_subunit_molecules(self, bond_pair_ids):
+    def get_subunit_molecules(self):
         """
         Get connected graphs based on Molecule separated by bonds.
-
-        Parameters
-        ----------
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
 
         Returns
         -------
@@ -335,37 +372,36 @@ class Molecule:
 
         """
 
-        # Produce a graph from the molecule that does not include edges
-        # where the bonds to be optimized are.
-        mol_graph = nx.Graph()
-        for atom in self.get_atoms():
-            mol_graph.add_node(atom.get_id())
-
-        # Add edges.
-        for bond in self.get_bonds():
-            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
-            if pair_ids not in bond_pair_ids:
-                mol_graph.add_edge(*pair_ids)
-
         # Get atom ids in disconnected subgraphs.
-        subunits = {}
-        for i, c in enumerate(nx.connected_components(mol_graph)):
-            c_ids = sorted(c)
+        subunit_molecules = {}
+        for subunit in self._subunits:
+            c_ids = sorted(self._subunits[subunit])
             in_atoms = [
                 i for i in self._atoms
-                if i.get_id() in c
+                if i.get_id() in c_ids
             ]
             in_bonds = [
                 i for i in self._bonds
-                if i.get_atom1_id() in c and i.get_atom2_id() in c
+                if i.get_atom1_id() in c_ids
+                and i.get_atom2_id() in c_ids
             ]
             new_pos_matrix = self._position_matrix[:, list(c_ids)].T
-            subunits[i] = Molecule(in_atoms, in_bonds, new_pos_matrix)
+            subunit_molecules[subunit] = Molecule(
+                atoms=in_atoms,
+                bonds=in_bonds,
+                position_matrix=new_pos_matrix,
+            )
 
-        return subunits
+        return subunit_molecules
 
     def __str__(self):
         return repr(self)
 
     def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'num. substructures={len(tuple(self.get_substructures()))}, '
+            f'num. subunits={len(self.get_subunits())}, '
+            f'disconnectors={self.get_disconnectors()})'
+        )
         return f'<{self.__class__.__name__} at {id(self)}>'
