@@ -9,7 +9,7 @@ Factory class for optimisation.
 """
 
 from .substructure import BondSubstructure, AngleSubstructure
-from .utilities import get_atom_ids
+from .utilities import get_atom_ids, get_atom_angle
 
 
 class Factory:
@@ -129,8 +129,29 @@ class RotatableBondFactory(Factory):
         """
         Initialize a :class:`Factory` instance.
 
-        Parameters
-        ----------
-        smarts : :class:`str`
+        """
+
+        # From rdkit: rdkit/Chem/Lipinski.py
+        self._rotatable_smarts = '[*!#1]~[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]'
+
+    def get_substructures(self, molecule):
+        """
+        Get substructures in molecule.
 
         """
+        position_matrix = molecule.get_position_matrix()
+
+        ids = get_atom_ids(self._rotatable_smarts, molecule)
+        collected_ids = set()
+        for atom_ids in ids:
+            rotatable_ids = tuple(sorted(atom_ids[1:]))
+            if rotatable_ids not in collected_ids:
+                yield AngleSubstructure(
+                    atom_ids=atom_ids,
+                    disconnectors=((1, 2), ),
+                    target=get_atom_angle(
+                        position_matrix=position_matrix,
+                        atom_ids=atom_ids,
+                    ),
+                )
+                collected_ids.add(rotatable_ids)
