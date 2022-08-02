@@ -10,6 +10,7 @@ Molecule class for optimisation.
 
 import numpy as np
 import networkx as nx
+import rdkit.Chem.AllChem as rdkit
 
 
 class Molecule:
@@ -50,7 +51,34 @@ class Molecule:
             position_matrix.T,
             dtype=np.float64,
         )
-        self._subunit_factories = subunit_factories
+
+    def to_rdkit_mol(self) -> rdkit.Mol:
+        """
+        Return an :mod:`rdkit` representation.
+
+        Returns:
+            The molecule in :mod:`rdkit` format.
+
+        """
+
+        mol = rdkit.EditableMol(rdkit.Mol())
+        for atom in self._atoms:
+            rdkit_atom = rdkit.Atom(atom.get_atomic_number())
+            mol.AddAtom(rdkit_atom)
+
+        for bond in self._bonds:
+            mol.AddBond(
+                beginAtomIdx=bond.get_atom1_id(),
+                endAtomIdx=bond.get_atom2_id(),
+            )
+
+        mol = mol.GetMol()
+        rdkit_conf = rdkit.Conformer(len(self._atoms))
+        for atom_id, atom_coord in enumerate(self._position_matrix.T):
+            rdkit_conf.SetAtomPosition(atom_id, atom_coord)
+            mol.GetAtomWithIdx(atom_id).SetNoImplicit(True)
+        mol.AddConformer(rdkit_conf)
+        return mol
 
     def get_position_matrix(self):
         """

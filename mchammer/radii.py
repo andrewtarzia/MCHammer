@@ -107,5 +107,6 @@ _atomic_radii = {
     'Db': 2.35,
 }
 
+
 def get_radius(element_string: str) -> float:
     return _atomic_radii[element_string]
