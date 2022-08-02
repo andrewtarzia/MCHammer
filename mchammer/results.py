@@ -17,7 +17,7 @@ class StepResult:
 
     """
 
-    def __init__(self, step, position_matrix, max_bond_distance, log):
+    def __init__(self, step, position_matrix, log):
         """
         Initialize a :class:`StepResult` instance.
 
@@ -30,9 +30,6 @@ class StepResult:
             A position matrix after performing this step. The shape of
             the matrix is ``(n, 3)``.
 
-        max_bond_distance : :class:`float`
-            Max length of bonds to be optimized in Angstrom.
-
         log : :class:`str`
             String log of this step.
 
@@ -40,7 +37,6 @@ class StepResult:
 
         self._step = step
         self._position_matrix = position_matrix
-        self._max_bond_distance = max_bond_distance
         self._log = log
 
     def get_step(self):
@@ -51,9 +47,6 @@ class StepResult:
 
     def get_position_matrix(self):
         return self._position_matrix
-
-    def get_max_bond_distance(self):
-        return self._max_bond_distance
 
 
 class MCStepResult(StepResult):
@@ -69,7 +62,6 @@ class MCStepResult(StepResult):
         passed,
         system_potential,
         nonbonded_potential,
-        max_bond_distance,
         log,
     ):
         """
@@ -94,9 +86,6 @@ class MCStepResult(StepResult):
         nonbonded_potential : :class:`float`
             Nonbonded potential of the structure after this step.
 
-        max_bond_distance : :class:`float`
-            Max length of bonds to be optimized in Angstrom.
-
         log : :class:`str`
             String log of this step.
 
@@ -108,7 +97,6 @@ class MCStepResult(StepResult):
         self._passed = passed
         self._system_potential = system_potential
         self._nonbonded_potential = nonbonded_potential
-        self._max_bond_distance = max_bond_distance
 
     def get_passed(self):
         return self._passed
@@ -121,7 +109,6 @@ class MCStepResult(StepResult):
 
     def get_properties(self):
         return {
-            'max_bond_distance': self._max_bond_distance,
             'system_potential': self._system_potential,
             'nonbonded_potential': self._nonbonded_potential,
             'passed': self._passed,
