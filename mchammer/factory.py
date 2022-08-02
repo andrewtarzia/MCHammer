@@ -8,7 +8,7 @@ Factory class for optimisation.
 
 """
 
-from .substructure import BondSubstructure
+from .substructure import BondSubstructure, AngleSubstructure
 from .utilities import get_atom_ids
 
 
@@ -90,7 +90,7 @@ class LongBondFactory(Factory):
 
 class AngleFactory(Factory):
 
-    def __init__(self, smarts):
+    def __init__(self, smarts, disconnectors, target):
         """
         Initialize a :class:`Factory` instance.
 
@@ -98,9 +98,29 @@ class AngleFactory(Factory):
         ----------
         smarts : :class:`str`
 
+        disconnectors : :class:`tuple` of :class:`int`
+
+        target : :class:`float`
+
         """
 
-        self._smarts = tuple(smarts)
+        self._smarts = smarts
+        self._disconnectors = disconnectors
+        self._target = target
+
+    def get_substructures(self, molecule):
+        """
+        Get substructures in molecule.
+
+        """
+
+        ids = get_atom_ids(self._smarts, molecule)
+        for atom_ids in ids:
+            yield AngleSubstructure(
+                atom_ids=atom_ids,
+                disconnectors=self._disconnectors,
+                target=self._target,
+            )
 
 
 class RotatableBondFactory(Factory):

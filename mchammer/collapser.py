@@ -202,20 +202,10 @@ class Collapser:
         )
 
         mol = mol.with_position_matrix(new_position_matrix)
-        # Update properties at each step.
-        max_bond_distance = max([
-            get_atom_distance(
-                position_matrix=mol.get_position_matrix(),
-                atom1_id=bond[0],
-                atom2_id=bond[1],
-            )
-            for bond in bond_pair_ids
-        ])
         step_result = StepResult(
             step=step,
             position_matrix=new_position_matrix,
-            max_bond_distance=max_bond_distance,
-            log=f"{step} {max_bond_distance}\n"
+            log='',
         )
         return mol, step_result
 

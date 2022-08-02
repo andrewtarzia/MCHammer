@@ -3,6 +3,8 @@ This module defines general-purpose objects, functions and classes.
 
 """
 
+import numpy as np
+from scipy.spatial.transform import Rotation
 from scipy.spatial.distance import euclidean
 import rdkit.Chem.AllChem as rdkit
 
@@ -80,3 +82,175 @@ def get_atomic_number(element_string):
     for i in periodic_table:
         if periodic_table[i] == element_string:
             return i
+
+
+def rotation_matrix_arbitrary_axis(angle, axis):
+    """
+    Returns a rotation matrix of `angle` radians about `axis`.
+
+    Parameters
+    ----------
+    angle : :class:`float`
+        The size of the rotation in radians.
+
+    axis : :class:`numpy.ndarray`
+        A 3 element aray which represents a vector. The vector is the
+        axis about which the rotation is carried out. Must be of
+        unit magnitude.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        A ``3x3`` array representing a rotation matrix.
+    """
+
+    a = np.cos(angle/2)
+    b, c, d = axis * np.sin(angle/2)
+
+    e11 = np.square(a) + np.square(b) - np.square(c) - np.square(d)
+    e12 = 2*(b*c - a*d)
+    e13 = 2*(b*d + a*c)
+
+    e21 = 2*(b*c + a*d)
+    e22 = np.square(a) + np.square(c) - np.square(b) - np.square(d)
+    e23 = 2*(c*d - a*b)
+
+    e31 = 2*(b*d - a*c)
+    e32 = 2*(c*d + a*b)
+    e33 = np.square(a) + np.square(d) - np.square(b) - np.square(c)
+
+    # Initialize as a scipy Rotation object, which normalizes the
+    # matrix and allows for returns as quaternion or alternative
+    # type in the future.
+    return Rotation.from_matrix(np.array([
+        [e11, e12, e13],
+        [e21, e22, e23],
+        [e31, e32, e33]
+    ])).as_matrix()
+
+
+def vector_angle(vector1, vector2):
+    """
+    Returns the angle between two vectors in radians.
+
+    Parameters
+    ----------
+    vector1 : :class:`numpy.ndarray`
+        The first vector.
+
+    vector2 : :class:`numpy.ndarray`
+        The second vector.
+
+    Returns
+    -------
+    :class:`float`
+        The angle between `vector1` and `vector2` in radians.
+
+    """
+
+    if np.all(np.equal(vector1, vector2)):
+        return 0.
+
+    numerator = np.dot(vector1, vector2)
+    denominator = np.linalg.norm(vector1) * np.linalg.norm(vector2)
+    # This if statement prevents returns of NaN due to floating point
+    # inaccuracy.
+    term = numerator/denominator
+    if term >= 1.:
+        return 0.0
+    if term <= -1.:
+        return np.pi
+    return np.arccos(term)
+
+
+def orthogonal_vector(vector):
+    ortho = np.array([0., 0., 0.])
+    for m, val in enumerate(vector):
+        if not np.allclose(val, 0, atol=1e-8):
+            n = (m+1) % 3
+            break
+    ortho[n] = vector[m]
+    ortho[m] = -vector[n]
+    return ortho
+
+
+def normalize_vector(vector):
+    """
+    Normalizes the given vector.
+
+    A new vector is returned, the original vector is not modified.
+
+    Parameters
+    ----------
+    vector : :class:`np.ndarray`
+        The vector to be normalized.
+
+    Returns
+    -------
+    :class:`np.ndarray`
+        The normalized vector.
+
+    """
+
+    return np.divide(vector, np.linalg.norm(vector))
+
+
+def rotation_matrix(vector1, vector2):
+    """
+    Returns a rotation matrix which transforms `vector1` to `vector2`.
+
+    Multiplying `vector1` by the rotation matrix returned by this
+    function yields `vector2`.
+
+    Parameters
+    ----------
+    vector1 : :class:`numpy.ndarray`
+        The vector which needs to be transformed to `vector2`.
+
+    vector2 : :class:`numpy.ndarray`
+        The vector onto which `vector1` needs to be transformed.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        A rotation matrix which transforms `vector1` to `vector2`.
+
+    References
+    ----------
+    http://tinyurl.com/kybj9ox
+    http://tinyurl.com/gn6e8mz
+
+    """
+
+    # Make sure both inputs are unit vectors.
+    vector1 = normalize_vector(vector1)
+    vector2 = normalize_vector(vector2)
+
+    # Hande the case where the input and output vectors are equal.
+    if np.allclose(vector1, vector2, atol=1e-8):
+        return np.identity(3)
+
+    # Handle the case where the rotation is 180 degrees.
+    if np.allclose(vector1, np.multiply(vector2, -1), atol=1e-8):
+        return rotation_matrix_arbitrary_axis(
+            angle=np.pi,
+            axis=orthogonal_vector(vector1)
+        )
+
+    v = np.cross(vector1, vector2)
+    vx = np.array([
+        [0, -v[2], v[1]],
+        [v[2], 0, -v[0]],
+        [-v[1], v[0], 0]
+    ])
+    s = np.linalg.norm(v)
+    c = np.dot(vector1, vector2)
+    i = np.identity(3)
+    mult_factor = (1-c)/np.square(s)
+
+    # Initialize as a scipy Rotation object, which normalizes the
+    # matrix and allows for returns as quaternion or alternative
+    # type in the future.
+    return Rotation.from_matrix(
+        i + vx + np.multiply(np.dot(vx, vx), mult_factor)
+    ).as_matrix()

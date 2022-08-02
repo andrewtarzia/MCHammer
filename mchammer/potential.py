@@ -60,6 +60,7 @@ class MchPotential(Potential):
         self,
         target_bond_length=1.2,
         bond_epsilon=50,
+        angle_epsilon=50,
         nonbond_epsilon=20,
         nonbond_mu=3,
     ):
@@ -77,6 +78,8 @@ class MchPotential(Potential):
             Determines strength of the bond potential.
             Defaults to 50.
 
+        angle_epsilon
+
         nonbond_epsilon : :class:`float`, optional
             Value of epsilon used in the nonbond potential in MC moves.
             Determines strength of the nonbond potential.
@@ -92,6 +95,7 @@ class MchPotential(Potential):
 
         self._target_bond_length = target_bond_length
         self._bond_epsilon = bond_epsilon
+        self._angle_epsilon = angle_epsilon
         self._nonbond_epsilon = nonbond_epsilon
         self._nonbond_mu = nonbond_mu
 
@@ -100,6 +104,9 @@ class MchPotential(Potential):
 
     def get_bond_epsilon(self):
         return self._bond_epsilon
+
+    def get_angle_epsilon(self):
+        return self._angle_epsilon
 
     def get_nonbond_epsilon(self):
         return self._nonbond_epsilon
@@ -180,8 +187,7 @@ class MchPotential(Potential):
         for substructure in molecule.get_substructures():
             system_potential += substructure.compute_potential(
                 position_matrix=position_matrix,
-                target=self._target_bond_length,
-                epsilon=self._bond_epsilon,
+                epsilon=self._angle_epsilon,
             )
 
         return system_potential, nonbonded_potential

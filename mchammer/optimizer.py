@@ -30,6 +30,7 @@ class Optimizer:
     def __init__(
         self,
         step_size,
+        rotation_step_size,
         num_steps,
         potential_function=MchPotential(),
         beta=2,
@@ -42,6 +43,9 @@ class Optimizer:
         ----------
         step_size : :class:`float`
             The relative size of the step to take during step.
+
+        rotation_step_size
+            in degrees
 
         num_steps : :class:`int`
             Number of MC moves to perform.
@@ -63,6 +67,7 @@ class Optimizer:
         """
 
         self._step_size = step_size
+        self._rotation_step_size = rotation_step_size
         self._num_steps = num_steps
         self._potential_function = potential_function
         self._beta = beta
@@ -87,7 +92,7 @@ class Optimizer:
                 return False
 
     def _output_top_lines(self):
-
+        pf = self._potential_function
         string = (
             '====================================================\n'
             '                MCHammer optimisation               \n'
@@ -97,11 +102,13 @@ class Optimizer:
             '                                                    \n'
             'Settings:                                           \n'
             f' step size = {self._step_size} \n'
-            f' target bond length = {self._potential_function.get_target_bond_length()} \n'
+            f' rotation step size = {self._rotation_step_size} \n'
+            f' target bond length = {pf.get_target_bond_length()} \n'
             f' num. steps = {self._num_steps} \n'
-            f' bond epsilon = {self._potential_function.get_bond_epsilon()} \n'
-            f' nonbond epsilon = {self._potential_function.get_nonbond_epsilon()} \n'
-            f' nonbond mu = {self._potential_function.get_nonbond_mu()} \n'
+            f' bond epsilon = {pf.get_bond_epsilon()} \n'
+            f' angle epsilon = {pf.get_angle_epsilon()} \n'
+            f' nonbond epsilon = {pf.get_nonbond_epsilon()} \n'
+            f' nonbond mu = {pf.get_nonbond_mu()} \n'
             f' beta = {self._beta} \n'
             '====================================================\n\n'
         )
@@ -145,34 +152,73 @@ class Optimizer:
         substructures = tuple(mol.get_substructures())
 
         # Define potential moves.
-        potential_moves = ('com_translation', 'substructure_move')
+        potential_moves = (
+            'com_translation',
+            'substructure_move',
+        )
         chosen_move = random.choice(potential_moves)
-
         if chosen_move == 'substructure_move':
-            # Randomly select a substructure to optimize from bonds.
+            # Randomly select a substructure to optimize.
             random_substructure = random.choice(substructures)
             substructure_ids = tuple(random_substructure.get_atom_ids())
 
-            # Get subunits connected by selected bonds.
-            subunit_1 = [
-                i
-                for i in subunits if substructure_ids[0] in subunits[i]
-            ][0]
-            subunit_2 = [
-                i
-                for i in subunits if substructure_ids[1] in subunits[i]
-            ][0]
-            # Choose subunit to move out of the two connected by the
-            # bond randomly.
-            moving_su = random.choice([subunit_1, subunit_2])
-            moving_su_atom_ids = tuple(i for i in subunits[moving_su])
-            # Random number from -1 to 1 for multiplying translation.
-            rand = (random.random() - 0.5) * 2
-            test_move = random_substructure.get_move(
-                position_matrix=position_matrix,
-                multiplier=self._step_size * rand,
-                movable_atom_ids=moving_su_atom_ids,
+            num_substructure_atoms = len(
+                random_substructure.get_atom_ids()
             )
+
+            # If BondSubstructure:
+            if num_substructure_atoms == 2:
+                # Choose subunit to move out of the two connected by the
+                # bond randomly.
+                moving_su_atom_id = random.choice([
+                    substructure_ids[0], substructure_ids[1]
+                ])
+                moving_su = [
+                    i for i in subunits
+                    if moving_su_atom_id in subunits[i]
+                ][0]
+                moving_su_atom_ids = tuple(
+                    i for i in subunits[moving_su]
+                )
+                # Random number in -1 to 1 for multiplying translation.
+                rand = (random.random() - 0.5) * 2
+                test_move = random_substructure.get_move(
+                    position_matrix=position_matrix,
+                    multiplier=self._step_size * rand,
+                    movable_atom_ids=moving_su_atom_ids,
+                )
+
+            # If AngleSubstructure:
+            elif num_substructure_atoms == 3:
+                # Choose subunit to move out of the two connected by the
+                # to the central atom.
+                moving_su_atom_id = random.choice([
+                    substructure_ids[0], substructure_ids[2]
+                ])
+                moving_su = [
+                    i for i in subunits
+                    if moving_su_atom_id in subunits[i]
+                ][0]
+                moving_su_atom_ids = tuple(
+                    i for i in subunits[moving_su]
+                )
+
+                # Define origin by moving subunit.
+                origin = mol.get_centroid(atom_ids=moving_su_atom_ids)
+                # Random number in -1 to 1 for multiplying rotation.
+                rand = (random.random() - 0.5) * 2
+                # Define an axis based on the plane defined by the three
+                # subunits.
+                axis = mol.get_plane_normal(
+                    atom_ids=substructure_ids,
+                )
+                test_move = random_substructure.get_move(
+                    position_matrix=position_matrix,
+                    multiplier=self._rotation_step_size * rand,
+                    movable_atom_ids=moving_su_atom_ids,
+                    origin=origin,
+                    axis=axis,
+                )
 
         elif chosen_move == 'com_translation':
             # Choose a random subunit.
@@ -195,6 +241,7 @@ class Optimizer:
         new_system_potential, new_nonbonded_potential = (
             self._potential_function.compute_potential(mol)
         )
+        print(new_system_potential-system_potential)
 
         if self._test_move(system_potential, new_system_potential):
             updated = 'T'

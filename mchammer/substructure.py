@@ -8,7 +8,8 @@ Substructure
 
 import numpy as np
 
-from .moves import Translation
+from .moves import Translation, RotationAboutAxis
+from .utilities import vector_angle
 
 
 class Substructure:
@@ -114,7 +115,7 @@ class BondSubstructure(Substructure):
         self._target = target
         self._target_unit = 'Angstrom'
 
-    def compute_potential(self, position_matrix, target, epsilon):
+    def compute_potential(self, position_matrix, epsilon, target=None):
         """
         Define an arbitrary parabolic bond potential.
 
@@ -158,3 +159,85 @@ class BondSubstructure(Substructure):
         bond_translation = -bond_vector * multiplier
 
         return Translation(bond_translation, movable_atom_ids)
+
+
+class AngleSubstructure(Substructure):
+    """
+    Angle substructure.
+
+    """
+
+    def __init__(self, atom_ids, disconnectors, target):
+        """
+        Initialize a :class:`AngleSubstructure` instance.
+
+        Parameters
+        ----------
+        atom_ids : :class:`tuple` of :class:`int`
+            Atom ids in substructure.
+
+        disconnectors
+
+        target
+
+        """
+
+        self._atom_ids = atom_ids
+        self._disconnectors = disconnectors
+        self._target = target
+        self._target_unit = 'degrees'
+
+    def compute_potential(self, position_matrix, epsilon):
+        """
+        Define an arbitrary parabolic angular potential.
+
+        This potential has no relation to an empircal forcefield.
+
+        """
+
+        angle = self._get_angle(
+            position_matrix=position_matrix,
+        )
+
+        potential = (angle - self._target) ** 2
+        potential = epsilon * potential
+        return potential
+
+    def _get_angle(self, position_matrix):
+        """
+        Get angle between atom1-atom2 and atom2-atom3.
+
+        """
+
+        atom1_pos = position_matrix[self._atom_ids[0]]
+        atom2_pos = position_matrix[self._atom_ids[1]]
+        atom3_pos = position_matrix[self._atom_ids[2]]
+        v1 = atom1_pos - atom2_pos
+        v2 = atom3_pos - atom2_pos
+        return np.degrees(vector_angle(v1, v2))
+
+    def get_move(
+        self,
+        position_matrix,
+        multiplier,
+        movable_atom_ids,
+        origin,
+        axis,
+    ):
+        """
+        Return Move class associated with substructure.
+
+        """
+
+        angle = self._get_angle(
+            position_matrix=position_matrix,
+        )
+        angle_diff = self._target - angle
+        rotation_angle = angle_diff * multiplier
+
+        return RotationAboutAxis(
+            angle=np.radians(rotation_angle),
+            movable_atom_ids=movable_atom_ids,
+            axis=axis,
+            origin=origin,
+        )

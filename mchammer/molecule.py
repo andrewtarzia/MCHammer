@@ -71,12 +71,18 @@ class Molecule:
         Normalize disconnectors from substructures.
 
         """
+
         self._disconnectors = set()
         for ss in self.get_substructures():
-            disconnectors = tuple(sorted(ss.get_disconnectors()))
+            disconnectors = (
+                tuple(sorted(i)) for i in ss.get_disconnectors()
+            )
             ss_ids = ss.get_atom_ids()
-            in_molecule_ids = tuple(ss_ids[i] for i in disconnectors)
-            self._disconnectors.add(in_molecule_ids)
+            for disconnect in disconnectors:
+                in_molecule_ids = tuple(
+                    ss_ids[i] for i in disconnect
+                )
+                self._disconnectors.add(in_molecule_ids)
 
     def get_disconnectors(self):
         """
@@ -276,6 +282,44 @@ class Molecule:
 
         with open(path, 'w') as f:
             f.write(''.join(content))
+
+    def get_plane_normal(self, atom_ids=None):
+        """
+        Return the normal to the plane of best fit.
+
+        Parameters
+        ----------
+        atom_ids : :class:`iterable` of :class:`int`, optional
+                The ids of atoms which should be used to calculate the
+                plane. Can be a single :class:`int`, if a
+                single atom is to be used, or ``None``, if all atoms
+                are to be used.
+
+        Returns
+        -------
+        :class:`np.array`
+            Vector orthonormal to the plane of the molecule.
+
+        Raises
+        ------
+        :class:`ValueError`
+            If `atom_ids` has a length of ``0``.
+
+        """
+
+        if atom_ids is None:
+            atom_ids = range(len(self._atoms))
+        elif isinstance(atom_ids, int):
+            atom_ids = (atom_ids, )
+        elif not isinstance(atom_ids, (list, tuple)):
+            atom_ids = list(atom_ids)
+
+        if len(atom_ids) == 0:
+            raise ValueError('atom_ids was of length 0.')
+
+        pos = self._position_matrix[:, atom_ids].T
+        centroid = self.get_centroid(atom_ids)
+        return np.around(np.linalg.svd(pos - centroid)[-1][2, :], 14)
 
     def get_atoms(self):
         """
