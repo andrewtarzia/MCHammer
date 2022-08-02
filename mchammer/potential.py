@@ -14,8 +14,6 @@ import numpy as np
 from itertools import combinations
 from scipy.spatial.distance import cdist
 
-from .utilities import get_atom_distance
-
 
 class Potential:
     """
@@ -109,19 +107,6 @@ class MchPotential(Potential):
     def get_nonbond_mu(self):
         return self._nonbond_mu
 
-    def _bond_potential(self, distance):
-        """
-        Define an arbitrary parabolic bond potential.
-
-        This potential has no relation to an empircal forcefield.
-
-        """
-
-        potential = (distance - self._target_bond_length) ** 2
-        potential = self._bond_epsilon * potential
-
-        return potential
-
     def _nonbond_potential(self, distance, sigmas):
         """
         Define an arbitrary repulsive nonbonded potential.
@@ -174,15 +159,17 @@ class MchPotential(Potential):
 
         return nonbonded_potential
 
-    def compute_potential(self, molecule, bond_pair_ids):
-        subunits = molecule.get_subunit_molecules(bond_pair_ids)
+    def compute_potential(self, molecule):
+        subunit_molecules = molecule.get_subunit_molecules()
         component_position_matrices = (
-            subunits[i].get_position_matrix()
-            for i in subunits
+            subunit_molecules[i].get_position_matrix()
+            for i in subunit_molecules
         )
         component_radii = (
-            tuple(j.get_radius() for j in subunits[i].get_atoms())
-            for i in molecule.get_subunits(bond_pair_ids)
+            tuple(j.get_radius() for j in (
+                subunit_molecules[i].get_atoms())
+            )
+            for i in molecule.get_subunits()
         )
         nonbonded_potential = self._compute_nonbonded_potential(
             position_matrices=component_position_matrices,
@@ -190,13 +177,11 @@ class MchPotential(Potential):
         )
         position_matrix = molecule.get_position_matrix()
         system_potential = nonbonded_potential
-        for bond in bond_pair_ids:
-            system_potential += self._bond_potential(
-                distance=get_atom_distance(
-                    position_matrix=position_matrix,
-                    atom1_id=bond[0],
-                    atom2_id=bond[1],
-                )
+        for substructure in molecule.get_substructures():
+            system_potential += substructure.compute_potential(
+                position_matrix=position_matrix,
+                target=self._target_bond_length,
+                epsilon=self._bond_epsilon,
             )
 
         return system_potential, nonbonded_potential
