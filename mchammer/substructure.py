@@ -230,3 +230,60 @@ class AngleSubstructure(Substructure):
             axis=axis,
             origin=origin,
         )
+
+
+class RotatableSubstructure(Substructure):
+    """
+    Rotatable substructure.
+
+    """
+
+    def __init__(self, atom_ids, disconnectors, target):
+        """
+        Initialize a :class:`AngleSubstructure` instance.
+
+        Parameters
+        ----------
+        atom_ids : :class:`tuple` of :class:`int`
+            Atom ids in substructure.
+
+        disconnectors
+
+        target
+
+        """
+
+        self._atom_ids = atom_ids
+        self._disconnectors = disconnectors
+        self._target = target
+        self._target_unit = 'degrees'
+
+    def compute_potential(self, position_matrix, epsilon):
+        """
+        Define that there is not potential barrier to rotatable bonds.
+
+        This has no relation to an empircal forcefield.
+
+        """
+
+        return 0
+
+    def get_move(
+        self,
+        position_matrix,
+        rotation_angle,
+        movable_atom_ids,
+        origin,
+        axis,
+    ):
+        """
+        Return Move class associated with substructure.
+
+        """
+
+        return RotationAboutAxis(
+            angle=np.radians(rotation_angle),
+            movable_atom_ids=movable_atom_ids,
+            axis=axis,
+            origin=origin,
+        )

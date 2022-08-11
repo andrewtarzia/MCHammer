@@ -16,6 +16,7 @@ import random
 from .results import MCStepResult, Result
 from .potential import MchPotential
 from .moves import Translation
+from .utilities import normalize_vector
 
 
 class Optimizer:
@@ -215,6 +216,39 @@ class Optimizer:
                 test_move = random_substructure.get_move(
                     position_matrix=position_matrix,
                     multiplier=self._rotation_step_size * rand,
+                    movable_atom_ids=moving_su_atom_ids,
+                    origin=origin,
+                    axis=axis,
+                )
+
+            # If RotatableSubstructure:
+            elif num_substructure_atoms == 4:
+                # Choose subunit to move out of the two connected by the
+                # to the central atom.
+                moving_su_atom_id = random.choice([
+                    substructure_ids[0], substructure_ids[3]
+                ])
+                moving_su = [
+                    i for i in subunits
+                    if moving_su_atom_id in subunits[i]
+                ][0]
+                moving_su_atom_ids = tuple(
+                    i for i in subunits[moving_su]
+                )
+
+                # Define origin by moving subunit.
+                origin = mol.get_centroid(atom_ids=moving_su_atom_ids)
+                # Random number in -90 to 90 for multiplying rotation.
+                rand_angle = (random.random() - 0.5) * 180
+                # Define an axis based on the bond between 1 and 2.
+                bond_vector = (
+                    position_matrix[substructure_ids[1]]
+                    - position_matrix[substructure_ids[2]]
+                )
+                axis = normalize_vector(bond_vector)
+                test_move = random_substructure.get_move(
+                    position_matrix=position_matrix,
+                    rotation_angle=rand_angle,
                     movable_atom_ids=moving_su_atom_ids,
                     origin=origin,
                     axis=axis,

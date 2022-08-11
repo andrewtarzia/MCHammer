@@ -167,16 +167,14 @@ class MchPotential(Potential):
         return nonbonded_potential
 
     def compute_potential(self, molecule):
-        subunit_molecules = molecule.get_subunit_molecules()
+        subunits = tuple(molecule.get_subunit_molecules())
         component_position_matrices = (
-            subunit_molecules[i].get_position_matrix()
-            for i in subunit_molecules
+            i.get_position_matrix()
+            for i in subunits
         )
         component_radii = (
-            tuple(j.get_radius() for j in (
-                subunit_molecules[i].get_atoms())
-            )
-            for i in molecule.get_subunits()
+            tuple(j.get_radius() for j in i.get_atoms())
+            for i in subunits
         )
         nonbonded_potential = self._compute_nonbonded_potential(
             position_matrices=component_position_matrices,

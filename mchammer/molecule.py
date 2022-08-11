@@ -12,6 +12,9 @@ import numpy as np
 import networkx as nx
 import rdkit.Chem.AllChem as rdkit
 
+from .atom import Atom
+from .bond import Bond
+
 
 class Molecule:
     """
@@ -64,6 +67,7 @@ class Molecule:
 
         """
         for substructure in substructure_factories:
+            print(substructure)
             yield from substructure.get_substructures(self)
 
     def _normalize_disconnectors(self):
@@ -79,9 +83,9 @@ class Molecule:
             )
             ss_ids = ss.get_atom_ids()
             for disconnect in disconnectors:
-                in_molecule_ids = tuple(
+                in_molecule_ids = tuple(sorted(
                     ss_ids[i] for i in disconnect
-                )
+                ))
                 self._disconnectors.add(in_molecule_ids)
 
     def get_disconnectors(self):
@@ -106,7 +110,9 @@ class Molecule:
 
         # Add edges.
         for bond in self.get_bonds():
-            pair_ids = (bond.get_atom1_id(), bond.get_atom2_id())
+            pair_ids = tuple(
+                sorted((bond.get_atom1_id(), bond.get_atom2_id()))
+            )
             if pair_ids not in self._disconnectors:
                 mol_graph.add_edge(*pair_ids)
 
@@ -411,9 +417,8 @@ class Molecule:
         """
         Get connected graphs based on Molecule separated by bonds.
 
-        Returns
-        -------
-        subunit_molecules : :class:`.dict`
+        Yields
+        ------
             The subunits of `mol` split by bonds defined by
             `bond_pair_ids`. Key is subunit identifier, Value is
             :class:`mch.Molecule`.
@@ -421,26 +426,50 @@ class Molecule:
         """
 
         # Get atom ids in disconnected subgraphs.
-        subunit_molecules = {}
         for subunit in self._subunits:
             c_ids = sorted(self._subunits[subunit])
+            atom_map = {
+                i: j for j, i in enumerate(c_ids)
+            }
             in_atoms = [
-                i for i in self._atoms
+                Atom(
+                    id=atom_map[i.get_id()],
+                    element_string=i.get_element_string()
+                )
+                for i in self._atoms
                 if i.get_id() in c_ids
             ]
             in_bonds = [
-                i for i in self._bonds
+                Bond(
+                    id=i.get_id(),
+                    atom_ids=(
+                        atom_map[i.get_atom1_id()],
+                        atom_map[i.get_atom2_id()],
+                    ),
+                    order=i.get_order(),
+                )
+                for i in self._bonds
                 if i.get_atom1_id() in c_ids
                 and i.get_atom2_id() in c_ids
             ]
             new_pos_matrix = self._position_matrix[:, list(c_ids)].T
-            subunit_molecules[subunit] = Molecule(
-                atoms=in_atoms,
-                bonds=in_bonds,
+            yield Molecule(
+                atoms=tuple(in_atoms),
+                bonds=tuple(in_bonds),
                 position_matrix=new_pos_matrix,
             )
 
-        return subunit_molecules
+    def get_num_atoms(self) -> int:
+        """
+        Return the number of atoms in the molecule.
+
+        Returns
+        -------
+            The number of atoms in the molecule.
+
+        """
+
+        return len(self._atoms)
 
     def __str__(self):
         return repr(self)
@@ -449,7 +478,7 @@ class Molecule:
         return (
             f'{self.__class__.__name__}('
             f'num. substructures={len(tuple(self.get_substructures()))}, '
-            f'num. subunits={len(self.get_subunits())}, '
+            f'num. subunits={len(tuple(self.get_subunits()))}, '
             f'disconnectors={self.get_disconnectors()})'
         )
         return f'<{self.__class__.__name__} at {id(self)}>'
