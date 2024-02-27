@@ -127,7 +127,7 @@ def test_c_get_trajectory(
     test_mol = coll_molecule.with_position_matrix(
         results.get_final_position_matrix()
     )
-    assert results.get_step_count() == 35  # noqa: PLR2004
+    assert results.get_step_count() == 35
 
     final_min_distance = min(
         dist

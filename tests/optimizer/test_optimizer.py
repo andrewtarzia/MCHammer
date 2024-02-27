@@ -118,8 +118,8 @@ def test_opt_get_result(
         ),
     )
     # Give it some wiggle room.
-    assert final_bond_length > 1.5  # noqa: PLR2004
-    assert final_bond_length < 2.5  # noqa: PLR2004
+    assert final_bond_length > 1.5
+    assert final_bond_length < 2.5
 
     # Test all other bond lengths are equivalent.
     for bond in molecule.get_bonds():
@@ -149,8 +149,8 @@ def test_opt_get_trajectory(
         subunits=subunits,
     )
 
-    assert results.get_step_count() == 99  # noqa: PLR2004
-    assert len(tuple(results.get_steps_properties())) == 100  # noqa: PLR2004
+    assert results.get_step_count() == 99
+    assert len(tuple(results.get_steps_properties())) == 100
 
     final_bond_length = np.linalg.norm(
         optimizer._get_bond_vector(  # noqa: SLF001
@@ -159,8 +159,8 @@ def test_opt_get_trajectory(
         ),
     )
     # Give it some wiggle room.
-    assert final_bond_length > 1.5  # noqa: PLR2004
-    assert final_bond_length < 2.5  # noqa: PLR2004
+    assert final_bond_length > 1.5
+    assert final_bond_length < 2.5
 
     # Test all other bond lengths are equivalent.
     for bond in molecule.get_bonds():

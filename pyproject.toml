@@ -70,6 +70,7 @@ convention = "google"
   "INP001",
   "T201",
   "PLR0913",
+  "PLR2004",
 ]
 "docs/source/conf.py" = ["D100", "INP001"]
 
