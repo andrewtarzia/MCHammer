@@ -1,23 +1,11 @@
-"""
-Atom
-====
-
-#. :class:`.Atom`
-
-Atom class.
-
-"""
+"""Atom class."""
 
 
 class Atom:
-    """
-    Atom.
+    """Atom."""
 
-    """
-
-    def __init__(self, id, element_string):
-        """
-        Initialize a :class:`Atom` instance.
+    def __init__(self, id: int, element_string: str) -> None:  # noqa: A002
+        """Initialize a :class:`Atom` instance.
 
         Parameters
         ----------
@@ -28,26 +16,21 @@ class Atom:
             Atom element symbol as string.
 
         """
-
         self._id = id
         self._element_string = element_string
 
-    def get_id(self):
-        """
-        Get atom ID.
-
-        """
+    def get_id(self) -> int:
+        """Get atom ID."""
         return self._id
 
-    def get_element_string(self):
-        """
-        Get atom element symbol.
-
-        """
+    def get_element_string(self) -> str:
+        """Get atom element symbol."""
         return self._element_string
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """String representation of Atom."""
         return repr(self)
 
-    def __repr__(self):
-        return f'{self.get_element_string()}(id={self.get_id()})'
+    def __repr__(self) -> str:
+        """String representation of Atom."""
+        return f"{self.get_element_string()}(id={self.get_id()})"

@@ -1,7 +1,9 @@
-from .optimizer import *  # noqa
-from .collapser import *  # noqa
-from .molecule import *  # noqa
-from .atom import *  # noqa
-from .bond import *  # noqa
-from .utilities import *  # noqa
-from .results import *  # noqa
+"""MCHammer package."""
+
+from .atom import *  # noqa: F403
+from .bond import *  # noqa: F403
+from .collapser import *  # noqa: F403
+from .molecule import *  # noqa: F403
+from .optimizer import *  # noqa: F403
+from .results import *  # noqa: F403
+from .utilities import *  # noqa: F403

@@ -1,23 +1,17 @@
-"""
-Bond
-====
+"""Bond class."""
 
-#. :class:`.Bond`
-
-Bond class.
-
-"""
+from __future__ import annotations
 
 
 class Bond:
-    """
-    Bond between two atoms.
+    """Bond between two atoms."""
 
-    """
-
-    def __init__(self, id, atom_ids):
-        """
-        Initialize a :class:`Bond` instance.
+    def __init__(
+        self,
+        id: int,  # noqa: A002
+        atom_ids: tuple[int, int],
+    ) -> None:
+        """Initialize a :class:`Bond` instance.
 
         Parameters
         ----------
@@ -29,42 +23,32 @@ class Bond:
             the smaller number and the IDs cannot be the same.
 
         """
-
         self._id = id
         if len(set(atom_ids)) == 0:
-            raise ValueError('Two distict atom ids are required.')
+            msg = "Two distict atom ids are required."
+            raise ValueError(msg)
         self._atom1_id, self._atom2_id = sorted(atom_ids)
 
-    def get_id(self):
-        """
-        Get bond ID.
-
-        """
-
+    def get_id(self) -> int:
+        """Get bond ID."""
         return self._id
 
-    def get_atom1_id(self):
-        """
-        Get ID of atom 1 in bond.
-
-        """
-
+    def get_atom1_id(self) -> int:
+        """Get ID of atom 1 in bond."""
         return self._atom1_id
 
-    def get_atom2_id(self):
-        """
-        Get ID of atom 2 in bond.
-
-        """
-
+    def get_atom2_id(self) -> int:
+        """Get ID of atom 2 in bond."""
         return self._atom2_id
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """String representation of Bond."""
         return repr(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """String representation of Bond."""
         return (
-            f'{self.__class__.__name__}(id={self.get_id()}, '
-            f'atom1_id={self.get_atom1_id()}, '
-            f'atom2_id={self.get_atom2_id()})'
+            f"{self.__class__.__name__}(id={self.get_id()}, "
+            f"atom1_id={self.get_atom1_id()}, "
+            f"atom2_id={self.get_atom2_id()})"
         )
