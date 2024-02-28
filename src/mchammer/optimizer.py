@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-import random
 import time
-from copy import deepcopy
 from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy.spatial.distance import pdist
 
+from .mc_operations import (
+    get_bond_vector,
+    test_move,
+    translate_atoms_along_vector,
+)
 from .results import MCStepResult, Result
 from .utilities import get_atom_distance
 
@@ -121,11 +124,12 @@ class Optimizer:
         pair_dists = pdist(position_matrix)
         return np.sum(self._nonbond_potential(pair_dists))
 
-    def _compute_potential(
+    def compute_potential(
         self,
         mol: Molecule,
         bond_pair_ids: list,
     ) -> tuple[float, float]:
+        """Compute the potential of a molecule."""
         position_matrix = mol.get_position_matrix()
         nonbonded_potential = self._compute_nonbonded_potential(
             position_matrix=position_matrix,
@@ -141,30 +145,6 @@ class Optimizer:
             )
 
         return system_potential, nonbonded_potential
-
-    def _translate_atoms_along_vector(
-        self,
-        mol: Molecule,
-        atom_ids: tuple,
-        vector: np.ndarray,
-    ) -> Molecule:
-        new_position_matrix = deepcopy(mol.get_position_matrix())
-        for atom in mol.get_atoms():
-            if atom.get_id() not in atom_ids:
-                continue
-            pos = mol.get_position_matrix()[atom.get_id()]
-            new_position_matrix[atom.get_id()] = pos - vector
-
-        return mol.with_position_matrix(new_position_matrix)
-
-    def _test_move(self, curr_pot: float, new_pot: float) -> bool:
-        if new_pot < curr_pot:
-            return True
-
-        exp_term = np.exp(-self._beta * (new_pot - curr_pot))
-        rand_number = random.random()  # noqa: S311
-
-        return exp_term > rand_number
 
     def _output_top_lines(self) -> str:
         return (
@@ -191,7 +171,7 @@ class Optimizer:
         mol: Molecule,
         bond_pair_ids: list,
     ) -> tuple[Molecule, MCStepResult]:
-        system_potential, nonbonded_potential = self._compute_potential(
+        system_potential, nonbonded_potential = self.compute_potential(
             mol=mol, bond_pair_ids=bond_pair_ids
         )
 
@@ -237,7 +217,7 @@ class Optimizer:
 
         # Randomly select a bond to optimize from bonds.
         bond_ids = self._generator.choice(bond_pair_ids)
-        bond_vector = self._get_bond_vector(
+        bond_vector = get_bond_vector(
             position_matrix=position_matrix, bond_pair=bond_ids
         )
 
@@ -270,7 +250,7 @@ class Optimizer:
 
         # Translate building block.
         # Update atom position of building block.
-        mol = self._translate_atoms_along_vector(
+        mol = translate_atoms_along_vector(
             mol=mol,
             atom_ids=moving_su_atom_ids,
             vector=translation_vector,  # type: ignore[arg-type]
@@ -279,9 +259,14 @@ class Optimizer:
         (
             new_system_potential,
             new_nonbonded_potential,
-        ) = self._compute_potential(mol=mol, bond_pair_ids=bond_pair_ids)
+        ) = self.compute_potential(mol=mol, bond_pair_ids=bond_pair_ids)
 
-        if self._test_move(system_potential, new_system_potential):
+        if test_move(
+            beta=self._beta,
+            curr_pot=system_potential,
+            new_pot=new_system_potential,
+            generator=self._generator,
+        ):
             updated = "T"
             passed = True
             system_potential = new_system_potential
@@ -290,7 +275,7 @@ class Optimizer:
             updated = "F"
             passed = False
             # Reverse move.
-            mol = self._translate_atoms_along_vector(
+            mol = translate_atoms_along_vector(
                 mol=mol,
                 atom_ids=moving_su_atom_ids,
                 vector=-translation_vector,  # type: ignore[operator]

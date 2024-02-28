@@ -57,7 +57,7 @@ class Collapser:
     def _get_subunit_distances(
         self,
         mol: Molecule,
-        subunits: dict,
+        subunits: dict[int, tuple],
     ) -> abc.Iterable[float]:
         """Yield the distances between subunits in mol.
 
