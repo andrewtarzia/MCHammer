@@ -6,15 +6,16 @@ MCHammer
 A Monte Carlo-based molecular optimizer for optimizing the length of specified
 bonds in a molecule toward a target using cheap and unphysical potentials.
 
-Please contact me with any questions (<andrew.tarzia@gmail.com>) or submit an
-issue!
+Please submit an issue with any questions or bugs!
 
 Installation
 ------------
 
 Install using pip:
 
-    pip install MCHammer
+.. code-block:: bash
+
+  pip install stk
 
 Algorithm
 ---------
@@ -33,15 +34,14 @@ bond length is the energy mininum and steric clashes are avoided.
 The MC algorithm is as follows:
 
 For ``step`` in *N* steps:
-    1. Choose a bond ``B`` at random:
-        Using ``random.choice()``.
-    2. Choose a subunit ``s`` on either side of ``B`` at random:
-        Using ``random.choice()``.
+    1. Choose a bond ``B`` at random.
+    2. Choose a subunit ``s`` on either side of ``B`` at random.
     3. Define two possible translations of ``s``, ``a`` and ``b`` and choose
     at random:
-        ``a`` is defined by a random [-1, 1) step along the ``s`` to molecule
-        centre of mass (com).
-        ``b`` is defined by a random [-1, 1) step along the vector ``B``.
+        ``a`` is defined by a random number in [-1, 1) step along the ``s`` to
+        molecule centre of mass (com).
+        ``b`` is defined by a random number in [-1, 1) step along the vector
+        ``B``.
         Step size is defined by user input.
     4. Compute system potential ``U`` = ``U_b`` + ``U_nb``:
         ``U_b`` is the bonded potential, defined by the sum of all parabolic
@@ -63,16 +63,16 @@ For ``step`` in *N* steps:
         Reject otherwise.
 
 The workflow for a porous organic cage built using *stk*
-(<https://stk.readthedocs.io/>) is shown schematically below (this example is
+(https://stk.readthedocs.io/) is shown schematically below (this example is
 shown in ``examples/stk_example.py``):
 
-.. image:: https://raw.githubusercontent.com/andrewtarzia/MCHammer/main/docs/workflow.png?sanitize=true
+.. image:: https://raw.githubusercontent.com/andrewtarzia/MCHammer/main/docs/source/_static/workflow.png?sanitize=true
 
 Examples
 --------
 
 This code was originally written for use with *stk*
-(<https://stk.readthedocs.io/>), which assembles structures with long bonds
+(https://stk.readthedocs.io/), which assembles structures with long bonds
 that we wanted to optimize quickly.
 Now it has been generalized to take any molecule (defined by atoms and bonds)
 and a set of bonds to optimize to some target bond length.

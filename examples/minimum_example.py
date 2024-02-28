@@ -1,9 +1,8 @@
 import os  # noqa: INP001, D100
 
 import matplotlib.pyplot as plt
-import stk
-
 import mchammer as mch
+import stk
 
 benzene = stk.BuildingBlock.init_from_file("benzene.mol")
 benzene_atoms = [
