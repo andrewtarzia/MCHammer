@@ -30,6 +30,7 @@ dev = [
   "sphinx-copybutton",
   "twine",
   "sphinx_rtd_theme",
+  "stk",
 ]
 
 
