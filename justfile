@@ -20,7 +20,7 @@ check:
   ( set -x; ruff format --check . )
 
   echo
-  ( set -x; mypy mchammer )
+  ( set -x; mypy src )
 
   echo
   ( set -x; pytest --cov=mchammer --cov-report term-missing )
