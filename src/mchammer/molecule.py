@@ -57,6 +57,22 @@ class Molecule:
         """
         return np.array(self._position_matrix.T)
 
+    def with_displacement(self, displacement: np.ndarray) -> Molecule:
+        """Return a displaced clone Molecule.
+
+        Parameters
+        ----------
+        displacement : :class:`numpy.ndarray`
+            The displacement vector to be applied.
+
+        """
+        new_position_matrix = self._position_matrix.T + displacement
+        return Molecule(
+            atoms=self._atoms,
+            bonds=self._bonds,
+            position_matrix=np.array(new_position_matrix),
+        )
+
     def with_position_matrix(self, position_matrix: np.ndarray) -> Molecule:
         """Return clone Molecule with new position matrix.
 
@@ -67,14 +83,11 @@ class Molecule:
             is ``(n, 3)``.
 
         """
-        clone = self.__class__.__new__(self.__class__)
-        Molecule.__init__(
-            self=clone,
+        return Molecule(
             atoms=self._atoms,
             bonds=self._bonds,
             position_matrix=np.array(position_matrix),
         )
-        return clone
 
     def _write_xyz_content(self) -> list[str]:
         """Write basic `.xyz` file content of Molecule."""
@@ -176,6 +189,10 @@ class Molecule:
         """
         yield from self._bonds
 
+    def get_num_atoms(self) -> int:
+        """Return the number of atoms in the molecule."""
+        return len(self._atoms)
+
     def get_centroid(self, atom_ids: tuple | set | None = None) -> float:
         """Return the centroid.
 
@@ -251,4 +268,7 @@ class Molecule:
 
     def __repr__(self) -> str:
         """String representation."""
-        return f"<{self.__class__.__name__} at {id(self)}>"
+        return (
+            f"<{self.__class__.__name__}({len(self._atoms)} atoms) "
+            f"at {id(self)}>"
+        )

@@ -8,9 +8,9 @@ import mchammer as mch
 
 @pytest.fixture(
     params=(
-        (mch.Atom(id=0, element_string="N"), 0, "N"),
-        (mch.Atom(id=65, element_string="P"), 65, "P"),
-        (mch.Atom(id=2, element_string="C"), 2, "C"),
+        (mch.Atom(id=0, element_string="N"), 0, "N", 1.4882656711484),
+        (mch.Atom(id=65, element_string="P"), 65, "P", 1.925513788),
+        (mch.Atom(id=2, element_string="C"), 2, "C", 1.60775485914852),
     )
 )
 def atom_info(request: pytest.FixtureRequest) -> tuple:
@@ -94,6 +94,30 @@ def molecule(
     return mch.Molecule(
         atoms=atoms, bonds=bonds, position_matrix=position_matrix
     )
+
+
+@pytest.fixture()
+def displacement() -> np.ndarray:
+    return np.array([0, 1, 0])
+
+
+@pytest.fixture()
+def displaced_position_matrix() -> np.ndarray:
+    return np.array(
+        [
+            [0, 2, 0],
+            [1, 2, 0],
+            [-1, 2, 0],
+            [0, 11, 0],
+            [1, 11, 0],
+            [-1, 11, 0],
+        ]
+    )
+
+
+@pytest.fixture()
+def num_atoms() -> int:
+    return 6
 
 
 @pytest.fixture()

@@ -130,4 +130,4 @@ dmypy.json
 
 # Ignore tests output
 test_opt_output/
-mchammer/_version.py
+src/mchammer/_version.py

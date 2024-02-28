@@ -37,12 +37,12 @@ dev = [
 github = "https://github.com/andrewtarzia/MCHammer"
 
 [tool.setuptools_scm]
-write_to = "mchammer/_version.py"
+write_to = "src/mchammer/_version.py"
 
 [tool.setuptools.packages.find]
 where = [
   # list of folders that contain the packages (["."] by default)
-  "mchammer",
+  "src",
 ]
 
 [tool.ruff]

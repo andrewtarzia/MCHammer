@@ -1,5 +1,7 @@
 """Atom class."""
 
+from .radii import get_radius
+
 
 class Atom:
     """Atom."""
@@ -18,6 +20,7 @@ class Atom:
         """
         self._id = id
         self._element_string = element_string
+        self._radius = get_radius(element_string)
 
     def get_id(self) -> int:
         """Get atom ID."""
@@ -26,6 +29,10 @@ class Atom:
     def get_element_string(self) -> str:
         """Get atom element symbol."""
         return self._element_string
+
+    def get_radius(self) -> float:
+        """Get atomic radius (STREUSEL)."""
+        return self._radius
 
     def __str__(self) -> str:
         """String representation of Atom."""

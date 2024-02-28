@@ -35,6 +35,21 @@ def test_molecule_with_position_matrix(
     )
 
 
+def test_molecule_with_displacement(
+    molecule: mch.Molecule,
+    displacement: np.ndarray,
+    displaced_position_matrix: np.ndarray,
+) -> None:
+    test = molecule.with_displacement(displacement)
+    print(test.get_position_matrix())
+    assert np.all(
+        np.allclose(
+            displaced_position_matrix,
+            test.get_position_matrix(),
+        )
+    )
+
+
 @pytest.fixture()
 def path(tmpdir) -> None:  # noqa: ANN001
     return os.path.join(tmpdir, "molecule.xyz")  # noqa: PTH118
@@ -86,3 +101,10 @@ def test_molecule_get_centroid(
 def test_molecule_get_subunits(molecule: mch.Molecule, subunits: dict) -> None:
     test = molecule.get_subunits(bond_pair_ids=((0, 3),))
     assert test == subunits
+
+
+def test_molecule_get_num_atoms(
+    molecule: mch.Molecule,
+    num_atoms: int,
+) -> None:
+    assert molecule.get_num_atoms() == num_atoms
