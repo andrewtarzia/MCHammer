@@ -1,5 +1,4 @@
 import numpy as np
-
 from mchammer import get_atom_distance
 
 

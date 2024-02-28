@@ -90,21 +90,9 @@ class Optimizer:
         self._nonbond_mu = nonbond_mu
         self._beta = beta
         if random_seed is None:
-            random.seed()
-            np.random.seed()  # noqa: NPY002
+            self._generator = np.random.default_rng()
         else:
-            random.seed(random_seed)
-            np.random.seed(random_seed)  # noqa: NPY002
-
-    def _get_bond_vector(
-        self,
-        position_matrix: np.ndarray,
-        bond_pair: tuple,
-    ) -> np.ndarray:
-        """Get vector from atom1 to atom2 in bond."""
-        atom1_pos = position_matrix[bond_pair[0]]
-        atom2_pos = position_matrix[bond_pair[1]]
-        return atom2_pos - atom1_pos
+            self._generator = np.random.default_rng(random_seed)
 
     def _bond_potential(self, distance: float) -> float:
         """Define an arbitrary parabolic bond potential.
@@ -248,7 +236,7 @@ class Optimizer:
         position_matrix = mol.get_position_matrix()
 
         # Randomly select a bond to optimize from bonds.
-        bond_ids = random.choice(bond_pair_ids)  # noqa: S311
+        bond_ids = self._generator.choice(bond_pair_ids)
         bond_vector = self._get_bond_vector(
             position_matrix=position_matrix, bond_pair=bond_ids
         )
@@ -259,11 +247,11 @@ class Optimizer:
 
         # Choose subunit to move out of the two connected by the
         # bond randomly.
-        moving_su = random.choice([subunit_1, subunit_2])  # noqa: S311
+        moving_su = self._generator.choice([subunit_1, subunit_2])
         moving_su_atom_ids = tuple(i for i in subunits[moving_su])
 
         # Random number from -1 to 1 for multiplying translation.
-        rand = (random.random() - 0.5) * 2  # noqa: S311
+        rand = (self._generator.random() - 0.5) * 2
         # Define translation along long bond vector where
         # direction is from force, magnitude is randomly
         # scaled.
@@ -276,11 +264,8 @@ class Optimizer:
 
         # Randomly choose between translation along long bond
         # vector or along BB-COM vector.
-        translation_vector = random.choice(  # noqa: S311
-            [
-                bond_translation,
-                com_translation,
-            ]
+        translation_vector = self._generator.choice(
+            [bond_translation, com_translation]  # type: ignore[arg-type]
         )
 
         # Translate building block.

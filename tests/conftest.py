@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import mchammer as mch
 import numpy as np
 import pytest
-
-import mchammer as mch
 
 
 @pytest.fixture(

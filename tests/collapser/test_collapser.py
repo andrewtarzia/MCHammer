@@ -1,8 +1,7 @@
 from collections import abc
 
-import numpy as np
-
 import mchammer as mch
+import numpy as np
 
 
 def test_c_get_subunit_distances(
