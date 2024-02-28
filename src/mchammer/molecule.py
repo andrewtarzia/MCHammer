@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import networkx as nx
@@ -14,19 +15,11 @@ if TYPE_CHECKING:
     from .bond import Bond
 
 
+@dataclass
 class Molecule:
-    """Molecule to optimize."""
+    """Molecule to optimize.
 
-    def __init__(
-        self,
-        atoms: tuple[Atom, ...],
-        bonds: tuple[Bond, ...],
-        position_matrix: np.ndarray,
-    ) -> None:
-        """Initialize a :class:`Molecule` instance.
-
-        Parameters
-        ----------
+    Attributes:
         atoms : :class:`iterable` of :class:`.Atom`
             Atoms that define the molecule.
 
@@ -37,11 +30,18 @@ class Molecule:
             A ``(n, 3)`` matrix holding the position of every atom in
             the :class:`.Molecule`.
 
-        """
-        self._atoms = tuple(atoms)
-        self._bonds = tuple(bonds)
-        self._position_matrix = np.array(
-            position_matrix.T,
+    """
+
+    atoms: tuple[Atom, ...]
+    bonds: tuple[Bond, ...]
+    position_matrix: np.ndarray
+
+    def __post_init__(self) -> None:
+        """Post initialization of molecule."""
+        self.atoms = tuple(self.atoms)
+        self.bonds = tuple(self.bonds)
+        self.position_matrix = np.array(
+            self.position_matrix.T,
             dtype=np.float64,
         )
 
@@ -55,7 +55,7 @@ class Molecule:
             x, y and z coordinates of an atom.
 
         """
-        return np.array(self._position_matrix.T)
+        return np.array(self.position_matrix.T)
 
     def with_displacement(self, displacement: np.ndarray) -> Molecule:
         """Return a displaced clone Molecule.
@@ -66,10 +66,10 @@ class Molecule:
             The displacement vector to be applied.
 
         """
-        new_position_matrix = self._position_matrix.T + displacement
+        new_position_matrix = self.position_matrix.T + displacement
         return Molecule(
-            atoms=self._atoms,
-            bonds=self._bonds,
+            atoms=tuple(self.atoms),
+            bonds=tuple(self.bonds),
             position_matrix=np.array(new_position_matrix),
         )
 
@@ -84,12 +84,12 @@ class Molecule:
 
         """
         return Molecule(
-            atoms=self._atoms,
-            bonds=self._bonds,
+            atoms=tuple(self.atoms),
+            bonds=tuple(self.bonds),
             position_matrix=np.array(position_matrix),
         )
 
-    def _write_xyz_content(self) -> list[str]:
+    def write_xyz_content(self) -> list[str]:
         """Write basic `.xyz` file content of Molecule."""
         coords = self.get_position_matrix()
         content = ["0"]
@@ -107,7 +107,7 @@ class Molecule:
         Connectivity is not maintained in this file type!
 
         """
-        content = self._write_xyz_content()
+        content = self.write_xyz_content()
 
         with open(path, "w") as f:
             f.write("".join(content))
@@ -176,7 +176,7 @@ class Molecule:
             An atom in the molecule.
 
         """
-        yield from self._atoms
+        yield from self.atoms
 
     def get_bonds(self) -> abc.Iterable[Bond]:
         """Yield the bonds in the molecule, ordered as input.
@@ -187,11 +187,11 @@ class Molecule:
             A bond in the molecule.
 
         """
-        yield from self._bonds
+        yield from self.bonds
 
     def get_num_atoms(self) -> int:
         """Return the number of atoms in the molecule."""
-        return len(self._atoms)
+        return len(self.atoms)
 
     def get_centroid(self, atom_ids: tuple | set | None = None) -> float:
         """Return the centroid.
@@ -216,7 +216,7 @@ class Molecule:
 
         """
         if atom_ids is None:
-            atom_ids = range(len(self._atoms))  # type: ignore[assignment]
+            atom_ids = range(len(self.atoms))  # type: ignore[assignment]
         elif not isinstance(atom_ids, (list, tuple)):
             atom_ids = tuple(atom_ids)
 
@@ -225,7 +225,7 @@ class Molecule:
             raise ValueError(msg)
 
         return np.divide(
-            self._position_matrix[:, atom_ids].sum(axis=1),  # type: ignore[index]
+            self.position_matrix[:, atom_ids].sum(axis=1),  # type: ignore[index]
             len(atom_ids),  # type: ignore[arg-type]
         )
 
@@ -269,6 +269,6 @@ class Molecule:
     def __repr__(self) -> str:
         """String representation."""
         return (
-            f"<{self.__class__.__name__}({len(self._atoms)} atoms) "
+            f"<{self.__class__.__name__}({len(self.atoms)} atoms) "
             f"at {id(self)}>"
         )

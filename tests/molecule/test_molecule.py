@@ -57,7 +57,7 @@ def path(tmpdir) -> None:  # noqa: ANN001
 
 def test_molecule_write_xyz_file(molecule: mch.Molecule, path: str) -> None:
     molecule.write_xyz_file(path)
-    content = molecule._write_xyz_content()  # noqa: SLF001
+    content = molecule.write_xyz_content()
     with open(path) as f:
         test_lines = f.readlines()
 

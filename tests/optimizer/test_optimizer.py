@@ -1,21 +1,17 @@
 from __future__ import annotations
 
-import numpy as np
-
 import mchammer as mch
+import numpy as np
 
 
 def test_opt_get_bond_vector(
-    optimizer: mch.Optimizer,
     bond_vector: np.ndarray,
     position_matrix: np.ndarray,
 ) -> None:
     assert np.all(
         np.equal(
             bond_vector,
-            optimizer._get_bond_vector(  # noqa: SLF001
-                position_matrix, (0, 3)
-            ),
+            mch.get_bond_vector(position_matrix, (0, 3)),
         )
     )
 
@@ -58,7 +54,7 @@ def test_opt_compute_potential(
     (
         test_system_potential,
         test_nonbond_potential,
-    ) = optimizer._compute_potential(  # noqa: SLF001
+    ) = optimizer.compute_potential(
         molecule,
         bond_pair_ids=((0, 3),),
     )
@@ -67,13 +63,12 @@ def test_opt_compute_potential(
 
 
 def test_opt_translate_atoms_along_vector(
-    optimizer: mch.Optimizer,
     molecule: mch.Molecule,
     position_matrix: np.ndarray,
     position_matrix3: np.ndarray,
 ) -> None:
     molecule = molecule.with_position_matrix(position_matrix)
-    new_molecule = optimizer._translate_atoms_along_vector(  # noqa: SLF001
+    new_molecule = mch.translate_atoms_along_vector(
         mol=molecule, atom_ids=(3, 4, 5), vector=np.array([0, 5, 0])
     )
     assert np.all(
@@ -82,7 +77,7 @@ def test_opt_translate_atoms_along_vector(
             new_molecule.get_position_matrix(),
         )
     )
-    new_molecule = optimizer._translate_atoms_along_vector(  # noqa: SLF001
+    new_molecule = mch.translate_atoms_along_vector(
         mol=new_molecule, atom_ids=(3, 4, 5), vector=np.array([0, -5, 0])
     )
     print(position_matrix, new_molecule.get_position_matrix())
@@ -94,9 +89,13 @@ def test_opt_translate_atoms_along_vector(
     )
 
 
-def test_opt_test_move(optimizer: mch.Optimizer) -> None:
-    # Do not test random component.
-    assert optimizer._test_move(curr_pot=-1, new_pot=-2)  # noqa: SLF001
+def test_opt_test_move() -> None:
+    assert mch.test_move(
+        beta=2,
+        curr_pot=-1,
+        new_pot=-2,
+        generator=np.random.default_rng(),
+    )
 
 
 def test_opt_get_result(
@@ -112,7 +111,7 @@ def test_opt_get_result(
     )
 
     final_bond_length = np.linalg.norm(
-        optimizer._get_bond_vector(  # noqa: SLF001
+        mch.get_bond_vector(
             position_matrix=results.position_matrix,
             bond_pair=(0, 3),
         ),
@@ -153,7 +152,7 @@ def test_opt_get_trajectory(
     assert len(tuple(results.get_steps_properties())) == 100
 
     final_bond_length = np.linalg.norm(
-        optimizer._get_bond_vector(  # noqa: SLF001
+        mch.get_bond_vector(
             position_matrix=results.get_final_position_matrix(),
             bond_pair=(0, 3),
         ),

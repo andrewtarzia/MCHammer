@@ -2,19 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 
+
+@dataclass
 class Bond:
-    """Bond between two atoms."""
+    """Bond between two atoms.
 
-    def __init__(
-        self,
-        id: int,  # noqa: A002
-        atom_ids: tuple[int, int],
-    ) -> None:
-        """Initialize a :class:`Bond` instance.
-
-        Parameters
-        ----------
+    Attributes:
         id : :class:`int`
             ID to be assigned to bond.
 
@@ -22,24 +17,29 @@ class Bond:
             IDs of atom 1 and atom 2 in bond, where atom 1 is always
             the smaller number and the IDs cannot be the same.
 
-        """
-        self._id = id
-        if len(set(atom_ids)) == 0:
-            msg = "Two distict atom ids are required."
+    """
+
+    id: int
+    atom_ids: tuple[int, int]
+
+    def __post_init__(self) -> None:
+        """Post initialization of bond."""
+        if len(set(self.atom_ids)) != 2:  # noqa: PLR2004
+            msg = "Two distinct atom ids are required."
             raise ValueError(msg)
-        self._atom1_id, self._atom2_id = sorted(atom_ids)
+        self.atom1_id, self.atom2_id = sorted(self.atom_ids)
 
     def get_id(self) -> int:
         """Get bond ID."""
-        return self._id
+        return self.id
 
     def get_atom1_id(self) -> int:
         """Get ID of atom 1 in bond."""
-        return self._atom1_id
+        return self.atom1_id
 
     def get_atom2_id(self) -> int:
         """Get ID of atom 2 in bond."""
-        return self._atom2_id
+        return self.atom2_id
 
     def __str__(self) -> str:
         """String representation of Bond."""
