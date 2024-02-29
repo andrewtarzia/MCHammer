@@ -15,7 +15,7 @@ Install using pip:
 
 .. code-block:: bash
 
-  pip install stk
+  pip install mchammer
 
 Algorithm
 ---------

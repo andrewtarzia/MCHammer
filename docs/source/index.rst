@@ -1,129 +1,242 @@
 .. toctree::
-   :hidden:
-   :caption: MCHammer
-   :maxdepth: 2
+  :hidden:
+  :maxdepth: 0
+  :caption: MCHammer
 
-   Analysis <analysis>
+  MCHammer <mch>
 
 .. toctree::
   :hidden:
-  :maxdepth: 2
+  :maxdepth: 0
   :caption: Modules:
 
   Modules <modules>
-
 
 Introduction
 ------------
 
 | GitHub: https://www.github.com/andrewtarzia/MCHammer
 
+:mod:`.mchammer` is a Monte Carlo-based molecular optimizer for optimizing the
+length of specified bonds in a molecule toward a target using cheap and
+unphysical potentials.
 
-.. important::
+Please submit an issue with any questions or bugs!
 
-  **Warning**: DOCS underdevelopment.
 
-:mod:`.CGExplore` is a Python library for for working with
-coarse-grained models.
+Usage with *stk*
+----------------
 
-The library is built off of `stk <https://stk.readthedocs.io/en/stable/>`_,
-which comes with the pip install.
+:mod:`.mchammer` optimisers (``Optimizer`` and ``Collapser``) are available by
+default in ``stk`` as:
 
-.. important::
+.. code-block:: python
 
-  **Warning**: This package is still very much underdevelopment and many changes
-  are expected.
+  import stk
+
+  bb1 = stk.BuildingBlock(
+    smiles='NCCN',
+    functional_groups=[stk.PrimaryAminoFactory()],
+  )
+  bb2 = stk.BuildingBlock(
+      smiles='O=CC(C=O)CC=O',
+      functional_groups=[stk.AldehydeFactory()],
+  )
+  cage = stk.ConstructedMolecule(
+      topology_graph=stk.cage.FourPlusSix(
+          building_blocks=(bb1, bb2),
+          optimizer=stk.MCHammer(), # mchammer.Optimizer
+      ),
+  )
+
+  # OR
+
+  cage = stk.ConstructedMolecule(
+      topology_graph=stk.cage.FourPlusSix(
+          building_blocks=(bb1, bb2),
+          optimizer=stk.Collapser(), # mchammer.Collapser
+      ),
+  )
+
+
 
 Installation
 ------------
 
-To install :mod:`.CGExplore`, you need to follow these steps:
+Install using pip:
 
-Create a `conda` or `mamba` environment::
+.. code-block:: bash
 
-  mamba create -n NAME python=3.11
+  pip install mchammer
 
-Activate the environment::
+Algorithm
+---------
 
-  conda activate NAME
+MCHammer implements a simple Metropolis Monte-Carlo algorithm to optimize the
+desired bonds toward a target bond length.
+We define a graph of the molecule at the atomic level, which is further
+coarse-grained into ``subunits`` that are separated by the bonds to be
+optimized.
+All atom positions/bond lengths within a subunit are kept rigid and do not
+contribute to the potential energy, other than through nonbonded interactions.
+The algorithm uses a simple Lennard-Jones nonbonded potential and parabolic
+bond potential to define the potential energy surface such that the target
+bond length is the energy mininum and steric clashes are avoided.
 
+The MC algorithm is as follows:
 
-Install :mod:`.CGExplore` with pip::
+For ``step`` in *N* steps:
+    1. Choose a bond ``B`` at random.
 
-  pip install cgexplore
+    2. Choose a subunit ``s`` on either side of ``B`` at random.
 
+    3. Define two possible translations of ``s``, ``a`` and ``b`` and choose
+    at random:
 
-Install `OpenMM` `docs <https://openmm.org/>`_::
+        ``a`` is defined by a random number in [-1, 1) step along the ``s`` to
+        molecule centre of mass (com).
+        ``b`` is defined by a random number in [-1, 1) step along the vector
+        ``B``.
+        Step size is defined by user input.
 
-  mamba install openmm
+    4. Compute system potential ``U`` = ``U_b`` + ``U_nb``:
 
-or::
+        ``U_b`` is the bonded potential, defined by the sum of all parabolic
+        bond stretches about the target bond length for all ``B``:
 
-  conda install -c conda-forge openmm
+            ``U_b = sum_i (epsilon_b * (r_i - R_t)^2 )``, where ``R_t`` is the
+            target bond length, ``epsilon_b`` defines the strength of the
+            potential and ``r_i`` is the ``ith`` bond length.
 
+        ``U_nb`` is the nonbonded potential, defined by the repulsive part of
+        the Lennard-Jones potential:
 
-Install `openmmtools` `docs <https://openmmtools.readthedocs.io/en/stable/gettingstarted.html>`_::
+            ``U_nb = sum_i,j (epsilon_nb * (sigma / r_ij)^mu)``, where
+            ``epsilon_nb`` defines the strength of the potential, ``sigma``
+            defines the position where the potential becomes repulsive, ``mu``
+            defines the steepness of the potential and ``r_ij`` is the
+            pairwise distance between atoms ``i`` and ``j``.
 
-  mamba install openmmtools
+    5. Accept or reject move:
 
-or::
+        Accept if ``U_i`` < ``U_(i-1)`` or ``exp(-beta(U_i - U_(i-1))`` > ``R``
+        , where ``R`` is a random number [0, 1) and ``beta`` is the inverse
+        Boltzmann temperature.
+        Reject otherwise.
 
-  conda config --add channels omnia --add channels conda-forge
-  conda install openmmtools
+The workflow for a porous organic cage built using *stk*
+(https://stk.readthedocs.io/) is shown schematically below (this example is
+shown in ``examples/stk_example.py``):
 
-
-Then, update directory structure in `env_set.py` if using example code.
-
-
-The library implements some analysis that uses `Shape 2.1`. Follow the
-instructions to download and installed at
-`Shape <https://www.iqtc.ub.edu/uncategorised/program-for-the-stereochemical-analysis-of-molecular-fragments-by-means-of-continous-shape-measures-and-associated-tools/>`_
-
-
-Developer Setup
----------------
-
-To develop with `CGExplore`, you should create a new environment as above, then:
-
-Clone :mod:`.CGExplore` from `here <https://github.com/andrewtarzia/CGExplore>`_
-
-From :mod:`.CGExplore` directory use `just <https://github.com/casey/just>`_ to
-install a dev environment with::
-
-  just dev
-
-And then follow the previous steps.
-
+.. image:: _static/workflow.png
 
 Examples
 --------
 
+This code was originally written for use with *stk*
+(https://stk.readthedocs.io/), which assembles structures with long bonds
+that we wanted to optimize quickly.
+Now it has been generalized to take any molecule (defined by atoms and bonds)
+and a set of bonds to optimize to some target bond length.
+The algorithm is unphysical in that the bonded and nonbonded potential we
+apply is meaningless, other than to give a reasonable structure for further
+optimisation or use in a workflow!
 
-The main series of examples are in `First Paper Example`_. In that page you
-will find all the information necessary to reproduce the work in
-`10.1039/D3SC03991A <https://doi.org/10.1039/D3SC03991A>`_
+The Optimizer class provides two main method: `get_result` and `get_trajectory`
+, which provide the optimized structure and properties or the structure and
+properties of each MC step, respectively.
+The molecule at each step of the trajectory and its properties can be
+collected from the results of the get_trajectory method, but not the
+get_result method (the example file: ``examples/minimum_example.py`` shows how
+to plot the optimisation progress and output the trajectory).
 
-With each pull request a test is run as a GitHub Action connected to this
-`repository <https://github.com/andrewtarzia/cg_model_test>`_.
-This ensures that the results obtained for a subset of the original data set do
-not change with changes to this library.
-
-.. note::
-
-  `cg_model_test <https://github.com/andrewtarzia/cg_model_test>`_ is a good
-  example of usage too!
+In this example, we use *stk* for I/O only with the input file available in
+``examples/minimum_example.py``:
 
 
-New works done with :mod:`.CGExplore`:
+.. code-block:: python
 
-* TBC.
+    import stk
+    import mchammer as mch
 
 
-Acknowledgements
-----------------
+    benzene = stk.BuildingBlock.init_from_file('benzene.mol')
+    benzene_atoms = [
+        (atom.get_id(), atom.__class__.__name__)
+        for atom in benzene.get_atoms()
+    ]
+    benzene_bonds = []
+    for i, bond in enumerate(benzene.get_bonds()):
+        b_ids = (bond.get_atom1().get_id(), bond.get_atom2().get_id())
+        benzene_bonds.append((i, b_ids))
 
-This work was completed during my time as a postdoc, and then research fellow
-in the Pavan group at PoliTO (https://www.gmpavanlab.com/).
+    mch_mol = mch.Molecule(
+        atoms=(
+            mch.Atom(id=i[0], element_string=i[1])
+            for i in benzene_atoms
+        ),
+        bonds=(
+            mch.Bond(id=i[0], atom_ids=i[1])
+            for i in benzene_bonds
+        ),
+        position_matrix=benzene.get_position_matrix(),
+    )
+
+    target_bond_length = 1.2
+    optimizer = mch.Optimizer(
+        step_size=0.25,
+        target_bond_length=target_bond_length,
+        num_steps=100,
+    )
+    subunits = mch_mol.get_subunits(
+        bond_pair_ids=((2, 3), (1, 5)),
+    )
+    # Get all steps.
+    mch_mol, mch_result = optimizer.get_trajectory(
+        mol=mch_mol,
+        bond_pair_ids=((2, 3), (1, 5)),
+        subunits=subunits,
+    )
+    # Update stk Molecule with new position matrix.
+    benzene = benzene.with_position_matrix(
+        mch_mol.get_position_matrix()
+    )
+    benzene.write('benzene_opt.mol')
+
+
+Finally, we mention that the `Optimizer.get_subunits()` is based on splitting
+the `Molecule` by the input `bond_pair_ids`.
+This method is now public, so that users can modify the defined subunits to
+enforce rigid non-covalent interactions.
+I.e. non-covalent complexes will be distinct subunits because there is no bond
+between them, and the user can merge them into one subunit by merging the
+iterable of atom ids in the `subunits` dictionary, to force the algorithm to
+treat them as one rigid body.
+An example of this is given in ``examples/stk_example.py`` using an arbitrary
+non-covalent complex BuildingBlock.
+
+As part of this code, I also provide the `Collapser` class, which is a naive
+precursor to MCHammer that simply moves all subunits toward the molecule
+centroid until a distance threshold is met.
+This can sometimes be faster than MCHammer for some molecule types.
+An example of this is shown in ``examples/collapser_example.py``.
+
+Contributors and Acknowledgements
+---------------------------------
+
+I developed this code as a post doc in the Jelfs research group at Imperial
+College London (<http://www.jelfs-group.org/>,
+<https://github.com/JelfsMaterialsGroup>).
+
+This code was reviewed and edited by: Lukas Turcani
+(<https://github.com/lukasturcani>), Steven Bennett
+(<https://github.com/stevenbennett96>)
+
+License
+-------
+
+This project is licensed under the MIT license.
+
 
 Indices and tables
 ------------------
@@ -132,5 +245,3 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-
-.. _`First Paper Example`: first_paper_example.html
