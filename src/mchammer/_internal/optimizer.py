@@ -8,13 +8,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 from scipy.spatial.distance import pdist
 
-from .mc_operations import (
-    get_bond_vector,
-    test_move,
-    translate_atoms_along_vector,
-)
+from .mc_operations import test_move, translate_atoms_along_vector
 from .results import MCStepResult, Result
-from .utilities import get_atom_distance
+from .utilities import get_atom_distance, get_bond_vector
 
 if TYPE_CHECKING:
     from .molecule import Molecule
@@ -42,46 +38,45 @@ class Optimizer:
     ) -> None:
         """Initialize a :class:`Optimizer` instance.
 
-        Parameters
-        ----------
-        step_size : :class:`float`
-            The relative size of the step to take during step.
+        Parameters:
+            step_size:
+                The relative size of the step to take during step.
 
-        target_bond_length : :class:`float`
-            Target equilibrium bond length for long bonds to minimize
-            to.
+            target_bond_length:
+                Target equilibrium bond length for long bonds to minimize
+                to.
 
-        num_steps : :class:`int`
-            Number of MC moves to perform.
+            num_steps:
+                Number of MC moves to perform.
 
-        bond_epsilon : :class:`float`, optional
-            Value of epsilon used in the bond potential in MC moves.
-            Determines strength of the bond potential.
-            Defaults to 50.
+            bond_epsilon:
+                Value of epsilon used in the bond potential in MC moves.
+                Determines strength of the bond potential.
+                Defaults to 50.
 
-        nonbond_epsilon : :class:`float`, optional
-            Value of epsilon used in the nonbond potential in MC moves.
-            Determines strength of the nonbond potential.
-            Defaults to 20.
+            nonbond_epsilon:
+                Value of epsilon used in the nonbond potential in MC moves.
+                Determines strength of the nonbond potential.
+                Defaults to 20.
 
-        nonbond_sigma : :class:`float`, optional
-            Value of sigma used in the nonbond potential in MC moves.
-            Defaults to 1.2.
+            nonbond_sigma:
+                Value of sigma used in the nonbond potential in MC moves.
+                Defaults to 1.2.
 
-        nonbond_mu : :class:`float`, optional
-            Value of mu used in the nonbond potential in MC moves.
-            Determines the steepness of the nonbond potential.
-            Defaults to 3.
+            nonbond_mu:
+                Value of mu used in the nonbond potential in MC moves.
+                Determines the steepness of the nonbond potential.
+                Defaults to 3.
 
-        beta : :class:`float`, optional
-            Value of beta used in the in MC moves. Beta takes the
-            place of the inverse boltzmann temperature.
-            Defaults to 2.
+            beta:
+                Value of beta used in the in MC moves. Beta takes the
+                place of the inverse boltzmann temperature.
+                Defaults to 2.
 
-        random_seed : :class:`int` or :class:`NoneType`, optional
-            Random seed to use for MC algorithm. Should only be set to
-            ``None`` if system-based random seed is desired. Defaults
-            to a set seed of 1000, to avoid randomness.
+            random_seed:
+                Random seed to use for MC algorithm. Should only be set to
+                ``None`` if system-based random seed is desired. Defaults
+                to a set seed of 1000, to avoid randomness.
 
         """
         self._step_size = step_size
@@ -318,28 +313,26 @@ class Optimizer:
     ) -> tuple[Molecule, Result]:
         """Get trajectory of optimization run on `mol`.
 
-        Parameters
-        ----------
-        mol : :class:`.Molecule`
-            The molecule to be optimized.
+        Parameters:
+            mol:
+                The molecule to be optimized.
 
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
+            bond_pair_ids:
+                :class:`iterable` of :class:`tuple` of :class:`ints`
+                Iterable of pairs of atom ids with bond between them to
+                optimize.
 
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
+            subunits:
+                The subunits of `mol` split by bonds defined by
+                `bond_pair_ids`. Key is subunit identifier, Value is
+                :class:`iterable` of atom ids in subunit.
 
         Returns:
-        -------
-        mol : :class:`.Molecule`
-            The optimized molecule.
+            mol:
+                The optimized molecule.
 
-        result : :class:`.Result`
-            The result of the optimization including all steps.
+            result:
+                The result of the optimization including all steps.
 
         """
         result = Result(start_time=time.time())
@@ -404,28 +397,26 @@ class Optimizer:
     ) -> tuple[Molecule, MCStepResult]:
         """Get final result of optimization run on `mol`.
 
-        Parameters
-        ----------
-        mol : :class:`.Molecule`
-            The molecule to be optimized.
+        Parameters:
+            mol:
+                The molecule to be optimized.
 
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
+            bond_pair_ids:
+                :class:`iterable` of :class:`tuple` of :class:`ints`
+                Iterable of pairs of atom ids with bond between them to
+                optimize.
 
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
+            subunits:
+                The subunits of `mol` split by bonds defined by
+                `bond_pair_ids`. Key is subunit identifier, Value is
+                :class:`iterable` of atom ids in subunit.
 
         Returns:
-        -------
-        mol : :class:`.Molecule`
-            The optimized molecule.
+            mol:
+                The optimized molecule.
 
-        result : :class:`.MCStepResult`
-            The result of the final optimization step.
+            result:
+                The result of the final optimization step.
 
         """
         mol, step_result = self._run_first_step(mol, bond_pair_ids)

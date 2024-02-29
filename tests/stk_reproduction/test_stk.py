@@ -53,8 +53,7 @@ def test_stk_collapser() -> None:
     new_polymer = polymer_unopt.with_position_matrix(
         position_matrix=mch_mol.get_position_matrix()
     )
-    print("test", polymer_opt.get_position_matrix())
-    print("new", new_polymer.get_position_matrix())
+
     assert np.all(
         np.equal(
             polymer_opt.get_position_matrix(),
@@ -65,8 +64,7 @@ def test_stk_collapser() -> None:
     known = stk.BuildingBlock.init_from_file(
         pathlib.Path(__file__).resolve().parent / "collapser.mol"
     )
-    print("test", known.get_position_matrix())
-    print("new", new_polymer.get_position_matrix())
+
     assert np.all(
         np.equal(
             known.get_position_matrix(),
@@ -127,8 +125,7 @@ def test_stk_mchammer() -> None:
     new_polymer = polymer_unopt.with_position_matrix(
         position_matrix=mch_mol.get_position_matrix()
     )
-    print("test", polymer_opt.get_position_matrix())
-    print("new", new_polymer.get_position_matrix())
+
     assert np.all(
         np.equal(
             polymer_opt.get_position_matrix(),
@@ -139,8 +136,7 @@ def test_stk_mchammer() -> None:
     known = stk.BuildingBlock.init_from_file(
         pathlib.Path(__file__).resolve().parent / "mchammer.mol"
     )
-    print("test", known.get_position_matrix())
-    print("new", new_polymer.get_position_matrix())
+
     assert np.all(
         np.equal(
             known.get_position_matrix(),

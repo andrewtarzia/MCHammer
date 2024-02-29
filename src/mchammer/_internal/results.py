@@ -15,18 +15,18 @@ if TYPE_CHECKING:
 class StepResult:
     """Results of a step.
 
-    Attributes:
-        step : :class:`int`
+    Parameters:
+        step:
             Step number.
 
-        position_matrix : :class:`numpy.ndarray`
+        position_matrix:
             A position matrix after performing this step. The shape of
             the matrix is ``(n, 3)``.
 
-        max_bond_distance : :class:`float`
+        max_bond_distance:
             Max length of bonds to be optimized in Angstrom.
 
-        log : :class:`str`
+        log:
             String log of this step.
 
     """
@@ -45,28 +45,28 @@ class StepResult:
 class MCStepResult(StepResult):
     """Results of a step.
 
-    Attributes:
-        step : :class:`int`
+    Parameters:
+        step:
             Step number.
 
-        position_matrix : :class:`numpy.ndarray`
+        position_matrix:
             A position matrix after performing this step. The shape of
             the matrix is ``(n, 3)``.
 
-        passed : :class:`bool` or :class:`None`
+        passed:
             Flag for whether the MC move passed, or was reverted to
             the previous step.
 
-        system_potential : :class:`float`
+        system_potential:
             System potential of the structure after this step.
 
-        nonbonded_potential : :class:`float`
+        nonbonded_potential:
             Nonbonded potential of the structure after this step.
 
-        max_bond_distance : :class:`float`
+        max_bond_distance:
             Max length of bonds to be optimized in Angstrom.
 
-        log : :class:`str`
+        log:
             String log of this step.
 
     """
@@ -95,10 +95,9 @@ class Result:
     def __init__(self, start_time: float) -> None:
         """Initialize a :class:`Result` instance.
 
-        Parameters
-        ----------
-        start_time : :class:`time.time()`
-            Start of run timing.
+        Parameters:
+            start_time:
+                Start of run timing.
 
         """
         self._start_time = start_time

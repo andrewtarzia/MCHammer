@@ -12,16 +12,6 @@ if TYPE_CHECKING:
     from .molecule import Molecule
 
 
-def get_bond_vector(
-    position_matrix: np.ndarray,
-    bond_pair: tuple[int, int],
-) -> np.ndarray:
-    """Get vector from atom1 to atom2 in bond."""
-    atom1_pos = position_matrix[bond_pair[0]]
-    atom2_pos = position_matrix[bond_pair[1]]
-    return atom2_pos - atom1_pos
-
-
 def translate_atoms_along_vector(
     mol: Molecule,
     atom_ids: tuple[int, ...],
@@ -68,18 +58,16 @@ def rotation_matrix_arbitrary_axis(
 ) -> np.ndarray:
     """Returns a rotation matrix of `angle` radians about `axis`.
 
-    Parameters
-    ----------
-    angle : :class:`float`
-        The size of the rotation in radians.
-    axis : :class:`numpy.ndarray`
-        A 3 element aray which represents a vector. The vector is the
-        axis about which the rotation is carried out. Must be of
-        unit magnitude.
+    Parameters:
+        angle:
+            The size of the rotation in radians.
+
+        axis:
+            A 3 element aray which represents a vector. The vector is the
+            axis about which the rotation is carried out. Must be of
+            unit magnitude.
 
     Returns:
-    -------
-    :class:`numpy.ndarray`
         A ``3x3`` array representing a rotation matrix.
     """
     a = np.cos(angle / 2)

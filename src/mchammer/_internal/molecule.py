@@ -19,14 +19,14 @@ if TYPE_CHECKING:
 class Molecule:
     """Molecule to optimize.
 
-    Attributes:
-        atoms : :class:`iterable` of :class:`.Atom`
+    Parameters:
+        atoms:
             Atoms that define the molecule.
 
-        bonds : :class:`iterable` of :class:`.Bond`
+        bonds:
             Bonds between atoms that define the molecule.
 
-        position_matrix : :class:`numpy.ndarray`
+        position_matrix:
             A ``(n, 3)`` matrix holding the position of every atom in
             the :class:`.Molecule`.
 
@@ -49,8 +49,6 @@ class Molecule:
         """Return a matrix holding the atomic positions.
 
         Returns:
-        -------
-        :class:`numpy.ndarray`
             The array has the shape ``(n, 3)``. Each row holds the
             x, y and z coordinates of an atom.
 
@@ -60,10 +58,9 @@ class Molecule:
     def with_displacement(self, displacement: np.ndarray) -> Molecule:
         """Return a displaced clone Molecule.
 
-        Parameters
-        ----------
-        displacement : :class:`numpy.ndarray`
-            The displacement vector to be applied.
+        Parameters:
+            displacement:
+                The displacement vector to be applied.
 
         """
         new_position_matrix = self.position_matrix.T + displacement
@@ -76,11 +73,10 @@ class Molecule:
     def with_position_matrix(self, position_matrix: np.ndarray) -> Molecule:
         """Return clone Molecule with new position matrix.
 
-        Parameters
-        ----------
-        position_matrix : :class:`numpy.ndarray`
-            A position matrix of the clone. The shape of the matrix
-            is ``(n, 3)``.
+        Parameters:
+            position_matrix:
+                A position matrix of the clone. The shape of the matrix
+                is ``(n, 3)``.
 
         """
         return Molecule(
@@ -168,25 +164,11 @@ class Molecule:
             f.write("".join(content))
 
     def get_atoms(self) -> abc.Iterable[Atom]:
-        """Yield the atoms in the molecule, ordered as input.
-
-        Yields:
-        ------
-        :class:`.Atom`
-            An atom in the molecule.
-
-        """
+        """Yield the atoms in the molecule, ordered as input."""
         yield from self.atoms
 
     def get_bonds(self) -> abc.Iterable[Bond]:
-        """Yield the bonds in the molecule, ordered as input.
-
-        Yields:
-        ------
-        :class:`.Bond`
-            A bond in the molecule.
-
-        """
+        """Yield the bonds in the molecule, ordered as input."""
         yield from self.bonds
 
     def get_num_atoms(self) -> int:
@@ -196,22 +178,17 @@ class Molecule:
     def get_centroid(self, atom_ids: tuple | set | None = None) -> float:
         """Return the centroid.
 
-        Parameters
-        ----------
-        atom_ids : :class:`iterable` of :class:`int`, optional
-            The ids of atoms which are used to calculate the
-            centroid. Can be a single :class:`int`, if a single
-            atom is to be used, or ``None`` if all atoms are to be
-            used.
+        Parameters:
+            atom_ids: :class:`iterable` of :class:`int`, optional
+                The ids of atoms which are used to calculate the
+                centroid. Can be a single :class:`int`, if a single
+                atom is to be used, or ``None`` if all atoms are to be
+                used.
 
         Returns:
-        -------
-        :class:`numpy.ndarray`
             The centroid of atoms specified by `atom_ids`.
 
         Raises:
-        ------
-        :class:`ValueError`
             If `atom_ids` has a length of ``0``.
 
         """
@@ -232,19 +209,17 @@ class Molecule:
     def get_subunits(self, bond_pair_ids: tuple) -> dict:
         """Get connected graphs based on Molecule separated by bonds.
 
-        Parameters
-        ----------
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
+        Parameters:
+            bond_pair_ids:
+                :class:`iterable` of :class:`tuple` of :class:`ints`
+                Iterable of pairs of atom ids with bond between them to
+                optimize.
 
         Returns:
-        -------
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
+            subunits:
+                The subunits of `mol` split by bonds defined by
+                `bond_pair_ids`. Key is subunit identifier, Value is
+                :class:`iterable` of atom ids in subunit.
 
         """
         # Produce a graph from the molecule that does not include edges

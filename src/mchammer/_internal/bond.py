@@ -9,11 +9,11 @@ from dataclasses import dataclass
 class Bond:
     """Bond between two atoms.
 
-    Attributes:
-        id : :class:`int`
+    Parameters:
+        id:
             ID to be assigned to bond.
 
-        atom_ids : :class:`iterable` of :class:`int`
+        atom_ids:
             IDs of atom 1 and atom 2 in bond, where atom 1 is always
             the smaller number and the IDs cannot be the same.
 

@@ -28,19 +28,18 @@ class Collapser:
     ) -> None:
         """Initialize a :class:`Collapser` instance.
 
-        Parameters
-        ----------
-        step_size : :class:`float`
-            The relative size of the step to take during collapse.
+        Parameters:
+            step_size:
+                The relative size of the step to take during collapse.
 
-        distance_threshold : :class:`float`
-            Distance between distinct subunits to use as
-            threshold for halting collapse in Angstrom.
+            distance_threshold:
+                Distance between distinct subunits to use as
+                threshold for halting collapse in Angstrom.
 
-        scale_steps : :class:`bool`, optional
-            Whether to scale the step of each distict building block
-            by their relative distance from the molecules centroid.
-            Defaults to ``True``
+            scale_steps:
+                Whether to scale the step of each distict building block
+                by their relative distance from the molecules centroid.
+                Defaults to ``True``
 
         """
         self._step_size = step_size
@@ -111,30 +110,28 @@ class Collapser:
     ) -> tuple[dict, dict]:
         """Get the subunit to COM vectors.
 
-        Parameters
-        ----------
-        mol : :class:`.Molecule`
-            The molecule to be optimized.
+        Parameters:
+            mol:
+                The molecule to be optimized.
 
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
+            subunits:
+                The subunits of `mol` split by bonds defined by
+                `bond_pair_ids`. Key is subunit identifier, Value is
+                :class:`iterable` of atom ids in subunit.
 
         Returns:
-        -------
-        su_cent_vectors :
-            :class:`dict` mapping :class:`int`: to
-            :class:`numpy.ndarray`
-            Dictionary mapping subunit ids (keys) to centroid
-            vectors (values) of each distinct building block in the
-            molecule.
+            su_cent_vectors:
+                :class:`dict` mapping :class:`int`: to
+                :class:`numpy.ndarray`
+                Dictionary mapping subunit ids (keys) to centroid
+                vectors (values) of each distinct building block in the
+                molecule.
 
-        su_cent_scales :
-            :class:`dict` mapping :class:`int`: to :class:`float`
-            Dictionary mapping subunit ids (keys) to relative
-            magnitude of centroid vectors (values) of each distinct
-            building block in the molecule.
+            su_cent_scales:
+                :class:`dict` mapping :class:`int`: to :class:`float`
+                Dictionary mapping subunit ids (keys) to relative
+                magnitude of centroid vectors (values) of each distinct
+                building block in the molecule.
 
         """
         centroid = mol.get_centroid()
@@ -208,28 +205,26 @@ class Collapser:
     ) -> tuple[Molecule, Result]:
         """Get trajectory of optimization run on `mol`.
 
-        Parameters
-        ----------
-        mol : :class:`.Molecule`
-            The molecule to be optimized.
+        Parameters:
+            mol:
+                The molecule to be optimized.
 
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
+            bond_pair_ids:
+                :class:`iterable` of :class:`tuple` of :class:`ints`
+                Iterable of pairs of atom ids with bond between them to
+                optimize.
 
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
+            subunits:
+                The subunits of `mol` split by bonds defined by
+                `bond_pair_ids`. Key is subunit identifier, Value is
+                :class:`iterable` of atom ids in subunit.
 
         Returns:
-        -------
-        mol : :class:`.Molecule`
-            The optimized molecule.
+            mol:
+                The optimized molecule.
 
-        result : :class:`.Result`
-            The result of the optimization including all steps.
+            result:
+                The result of the optimization including all steps.
 
         """
         result = Result(start_time=time.time())
@@ -297,28 +292,26 @@ class Collapser:
     ) -> tuple[Molecule, StepResult]:
         """Get final result of the optimization of `mol`.
 
-        Parameters
-        ----------
-        mol : :class:`.Molecule`
-            The molecule to be optimized.
+        Parameters:
+            mol:
+                The molecule to be optimized.
 
-        bond_pair_ids :
-            :class:`iterable` of :class:`tuple` of :class:`ints`
-            Iterable of pairs of atom ids with bond between them to
-            optimize.
+            bond_pair_ids:
+                :class:`iterable` of :class:`tuple` of :class:`ints`
+                Iterable of pairs of atom ids with bond between them to
+                optimize.
 
-        subunits : :class:`.dict`
-            The subunits of `mol` split by bonds defined by
-            `bond_pair_ids`. Key is subunit identifier, Value is
-            :class:`iterable` of atom ids in subunit.
+            subunits:
+                The subunits of `mol` split by bonds defined by
+                `bond_pair_ids`. Key is subunit identifier, Value is
+                :class:`iterable` of atom ids in subunit.
 
         Returns:
-        -------
-        mol : :class:`.Molecule`
-            The optimized molecule.
+            mol:
+                The optimized molecule.
 
-        result : :class:`.StepResult`
-            The result of the final optimization step.
+            result:
+                The result of the final optimization step.
 
         """
         step = 0

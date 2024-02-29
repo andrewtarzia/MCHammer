@@ -11,7 +11,7 @@ from .radii import get_radius
 class Atom:
     """Atom.
 
-    Attributes:
+    Parameters:
         id:
             ID to be assigned to atom.
 
