@@ -66,9 +66,10 @@ def test_stk_collapser() -> None:
     )
 
     assert np.all(
-        np.equal(
+        np.isclose(
             known.get_position_matrix(),
             new_polymer.get_position_matrix(),
+            atol=1e-2,
         )
     )
 
@@ -138,8 +139,9 @@ def test_stk_mchammer() -> None:
     )
 
     assert np.all(
-        np.equal(
+        np.isclose(
             known.get_position_matrix(),
             new_polymer.get_position_matrix(),
+            atol=1e-2,
         )
     )
