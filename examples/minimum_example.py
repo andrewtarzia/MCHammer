@@ -66,6 +66,7 @@ ax.plot(data["steps"], data["max_bond_distances"], c="k", lw=2)
 # Set number of ticks for x-axis
 ax.tick_params(axis="both", which="major", labelsize=16)
 ax.set_xlim(0, None)
+ax.set_ylim(0, None)
 ax.set_xlabel("step", fontsize=16)
 ax.set_ylabel("max long bond length [angstrom]", fontsize=16)
 ax.axhline(y=target_bond_length, c="r", linestyle="--")
@@ -91,6 +92,7 @@ ax.plot(
 # Set number of ticks for x-axis
 ax.tick_params(axis="both", which="major", labelsize=16)
 ax.set_xlim(0, None)
+ax.set_ylim(0, None)
 ax.set_xlabel("step", fontsize=16)
 ax.set_ylabel("potential", fontsize=16)
 ax.legend(fontsize=16)

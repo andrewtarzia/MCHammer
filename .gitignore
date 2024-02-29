@@ -131,3 +131,5 @@ dmypy.json
 # Ignore tests output
 test_opt_output/
 src/mchammer/_version.py
+examples/benzene_traj/
+examples/coll_poc_traj/
