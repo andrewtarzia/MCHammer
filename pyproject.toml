@@ -1,0 +1,108 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "MCHammer"
+maintainers = [
+  { name = "Andrew Tarzia", email = "andrew.tarzia@gmail.com" },
+]
+dependencies = [
+  "scipy",
+  "matplotlib",
+  "networkx",
+  "numpy",
+]
+requires-python = ">=3.6"
+dynamic = ["version"]
+readme = "README.md"
+
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "mypy",
+  "pip-tools",
+  "pytest<8",
+  "pytest-datadir",
+  "pytest-lazy-fixture",
+  "pytest-cov",
+  "sphinx",
+  "sphinx-copybutton",
+  "twine",
+  "sphinx_rtd_theme",
+  "stk",
+]
+
+
+[project.urls]
+github = "https://github.com/andrewtarzia/MCHammer"
+
+[tool.setuptools_scm]
+write_to = "src/mchammer/_version.py"
+
+[tool.setuptools.packages.find]
+where = [
+  # list of folders that contain the packages (["."] by default)
+  "src",
+]
+
+[tool.ruff]
+line-length = 79
+exclude = []
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["ANN101", "ANN401", "COM812", "ISC001", "G004", "PTH123"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D106",
+  "D107",
+  "S101",
+  "INP001",
+  "T201",
+  "PLR0913",
+  "PLR2004",
+]
+"docs/source/conf.py" = ["D100", "INP001"]
+
+[tool.pytest.ini_options]
+testpaths = [
+  "tests",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
+python_functions = [
+  "test_*",
+]
+
+[tool.mypy]
+show_error_codes = true
+implicit_optional = false
+warn_no_return = true
+strict_optional = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+warn_unreachable = true
+disallow_any_generics = false
+
+[[tool.mypy.overrides]]
+module = [
+  "matplotlib.*",
+  "scipy.*",
+  "networkx.*"
+]
+ignore_missing_imports = true
