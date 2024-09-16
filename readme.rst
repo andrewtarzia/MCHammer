@@ -20,6 +20,10 @@ Install using pip:
 Algorithm
 ---------
 
+Subunits are the rigid bodies of a molecule.
+Substructures are the bonded interactions between them. 
+There are nonbonded interactions between subunits too.
+
 MCHammer implements a simple Metropolis Monte-Carlo algorithm to optimize the
 desired bonds toward a target bond length.
 We define a graph of the molecule at the atomic level, which is further
