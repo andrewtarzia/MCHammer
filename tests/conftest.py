@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import mchammer as mch
 import numpy as np
 import pytest
+
+import mchammer as mch
 
 
 @pytest.fixture(
@@ -28,7 +29,7 @@ def bond_info(request: pytest.FixtureRequest) -> tuple:
     return request.param
 
 
-@pytest.fixture()
+@pytest.fixture
 def atoms() -> list[mch.Atom]:
     return [
         mch.Atom(0, "C"),
@@ -40,7 +41,7 @@ def atoms() -> list[mch.Atom]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def bonds() -> list[mch.Bond]:
     return [
         mch.Bond(0, (0, 1)),
@@ -51,7 +52,7 @@ def bonds() -> list[mch.Bond]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def position_matrix() -> np.ndarray:
     return np.array(
         [
@@ -65,7 +66,7 @@ def position_matrix() -> np.ndarray:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def position_matrix2() -> np.ndarray:
     return np.array(
         [
@@ -79,12 +80,12 @@ def position_matrix2() -> np.ndarray:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def centroid() -> np.ndarray:
     return np.array([0, 5.5, 0])
 
 
-@pytest.fixture()
+@pytest.fixture
 def molecule(
     atoms: tuple,
     bonds: tuple,
@@ -95,12 +96,12 @@ def molecule(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def displacement() -> np.ndarray:
     return np.array([0, 1, 0])
 
 
-@pytest.fixture()
+@pytest.fixture
 def displaced_position_matrix() -> np.ndarray:
     return np.array(
         [
@@ -114,22 +115,22 @@ def displaced_position_matrix() -> np.ndarray:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def num_atoms() -> int:
     return 6
 
 
-@pytest.fixture()
+@pytest.fixture
 def bond_vector() -> np.ndarray:
     return np.array([0, 9, 0])
 
 
-@pytest.fixture()
+@pytest.fixture
 def bond_potentials() -> list[int]:
     return [50, 0, 50, 200, 450, 800, 1250]
 
 
-@pytest.fixture()
+@pytest.fixture
 def nonbond_potentials() -> list[float]:
     return [
         34.559999999999995,
@@ -142,22 +143,22 @@ def nonbond_potentials() -> list[float]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def nonbonded_potential() -> float:
     return 147.2965949864993
 
 
-@pytest.fixture()
+@pytest.fixture
 def system_potential() -> float:
     return 2597.2965949864993
 
 
-@pytest.fixture()
+@pytest.fixture
 def subunits() -> dict:
     return {0: {0, 1, 2}, 1: {3, 4, 5}}
 
 
-@pytest.fixture()
+@pytest.fixture
 def position_matrix3() -> np.ndarray:
     return np.array(
         [
@@ -171,12 +172,12 @@ def position_matrix3() -> np.ndarray:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def optimizer() -> mch.Optimizer:
     return mch.Optimizer(step_size=0.1, target_bond_length=2.0, num_steps=100)
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_atoms() -> list[mch.Atom]:
     return [
         mch.Atom(0, "C"),
@@ -188,7 +189,7 @@ def coll_atoms() -> list[mch.Atom]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_bonds() -> list[mch.Bond]:
     return [
         mch.Bond(0, (0, 1)),
@@ -199,7 +200,7 @@ def coll_bonds() -> list[mch.Bond]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_position_matrix() -> np.ndarray:
     return np.array(
         [
@@ -213,12 +214,12 @@ def coll_position_matrix() -> np.ndarray:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_vectors() -> dict:
     return {0: np.array([2, -1.5, 0]), 1: np.array([0, 2.5, 0])}
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_su_dists() -> list:
     return [
         9,
@@ -233,17 +234,17 @@ def coll_su_dists() -> list:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_scales() -> dict:
     return {0: 0.2, 1: 1.0}
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_step() -> float:
     return 1.5
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_position_matrix2() -> np.ndarray:
     return np.array(
         [
@@ -257,17 +258,17 @@ def coll_position_matrix2() -> np.ndarray:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def su_vectors() -> dict:
     return {0: np.array([0, -4.5, 0]), 1: np.array([0, 4.5, 0])}
 
 
-@pytest.fixture()
+@pytest.fixture
 def su_scales() -> dict:
     return {0: 1.0, 1: 1.0}
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_molecule(
     coll_atoms: list,
     coll_bonds: list,
@@ -280,12 +281,12 @@ def coll_molecule(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_subunits() -> dict:
     return {0: {0, 1, 2}, 1: {3, 4, 5}}
 
 
-@pytest.fixture()
+@pytest.fixture
 def coll_final_position_matrix() -> np.ndarray:
     return np.array(
         [
@@ -299,7 +300,7 @@ def coll_final_position_matrix() -> np.ndarray:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def collapser() -> mch.Collapser:
     return mch.Collapser(
         step_size=0.05,

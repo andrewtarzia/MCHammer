@@ -1,8 +1,9 @@
 import pathlib
 
-import mchammer as mch
 import numpy as np
 import stk
+
+import mchammer as mch
 
 from .utilities import get_long_bond_ids, get_mch_bonds, get_subunits
 
@@ -45,7 +46,7 @@ def test_stk_collapser() -> None:
         distance_threshold=1.5,
         scale_steps=True,
     )
-    mch_mol, result = optimizer.get_result(
+    mch_mol, _result = optimizer.get_result(
         mol=mch_mol,
         bond_pair_ids=tuple(get_long_bond_ids(polymer_unopt)),
         subunits=get_subunits(polymer_unopt),

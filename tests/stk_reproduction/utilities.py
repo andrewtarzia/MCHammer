@@ -1,7 +1,8 @@
 from collections import defaultdict
 
-import mchammer as mch
 import stk
+
+import mchammer as mch
 
 
 def get_mch_bonds(state: stk.ConstructedMolecule):  # noqa: ANN201
