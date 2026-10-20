@@ -1,7 +1,8 @@
 from collections import defaultdict  # noqa: INP001, D100
 
-import mchammer as mch
 import stk
+
+import mchammer as mch
 
 
 def get_long_bond_ids(mol: mch.Molecule) -> tuple:

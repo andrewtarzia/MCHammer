@@ -24,7 +24,7 @@ class Optimizer:
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         step_size: float,
         target_bond_length: float,
@@ -199,7 +199,7 @@ class Optimizer:
 
         return mol, step_result
 
-    def _run_step(  # noqa: PLR0913
+    def _run_step(  # noqa: PLR0913, PLR0917
         self,
         mol: Molecule,
         bond_pair_ids: list,
@@ -273,7 +273,7 @@ class Optimizer:
             mol = translate_atoms_along_vector(
                 mol=mol,
                 atom_ids=moving_su_atom_ids,
-                vector=-translation_vector,  # type: ignore[operator]
+                vector=-translation_vector,  # type: ignore[operator, arg-type]
             )
 
         # Update properties at each step.
@@ -379,7 +379,7 @@ class Optimizer:
                 "\n============================================\n"
                 "Optimisation done:\n"
                 f"{num_passed} steps passed: "
-                f"{(num_passed/self._num_steps)*100}"
+                f"{(num_passed / self._num_steps) * 100}"
                 "%\n"
                 f"Total optimisation time: "
                 f"{round(result.get_timing(time.time()), 4)}s\n"

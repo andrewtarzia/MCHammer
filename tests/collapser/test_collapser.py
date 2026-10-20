@@ -1,7 +1,8 @@
 from collections import abc
 
-import mchammer as mch
 import numpy as np
+
+import mchammer as mch
 
 
 def test_c_get_subunit_distances(
@@ -18,11 +19,11 @@ def test_c_get_subunit_distances(
             subunits=coll_subunits,
         )
     ):
-        print(i)
+        print(i)  # noqa: T201
         assert np.isclose(dist, coll_su_dists[i], atol=1e-6)
 
 
-def test_c_get_new_position_matrix(
+def test_c_get_new_position_matrix(  # noqa: PLR0913, PLR0917
     collapser: mch.Collapser,
     coll_position_matrix: np.ndarray,
     coll_position_matrix2: np.ndarray,
@@ -57,7 +58,7 @@ def test_c_get_bb_vectors(
     test_vectors, test_scales = collapser._get_subunit_vectors(  # noqa: SLF001
         coll_molecule, coll_subunits
     )
-    for t, s in zip(test_vectors, su_vectors):
+    for t, s in zip(test_vectors, su_vectors, strict=True):
         test = test_vectors[t]
         su_v = su_vectors[s]
         assert np.all(np.equal(test, su_v))
@@ -126,7 +127,7 @@ def test_c_get_trajectory(
     test_mol = coll_molecule.with_position_matrix(
         results.get_final_position_matrix()
     )
-    assert results.get_step_count() == 35
+    assert results.get_step_count() == 35  # noqa: PLR2004
 
     final_min_distance = min(
         dist

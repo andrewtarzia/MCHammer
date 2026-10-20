@@ -105,7 +105,7 @@ class Molecule:
         """
         content = self.write_xyz_content()
 
-        with open(path, "w") as f:
+        with open(path, "w") as f:  # noqa: PTH123
             f.write("".join(content))
 
     def _write_pdb_content(self) -> list[str]:
@@ -149,7 +149,7 @@ class Molecule:
             a2 = bond.get_atom2_id()
             if a1 in atoms and a2 in atoms:
                 content.append(
-                    f"{conect:<6}{a1+1:>5}{a2+1:>5}               \n"
+                    f"{conect:<6}{a1 + 1:>5}{a2 + 1:>5}               \n"
                 )
 
         content.append("END\n")
@@ -160,7 +160,7 @@ class Molecule:
         """Write basic `.pdb` file of Molecule to `path`."""
         content = self._write_pdb_content()
 
-        with open(path, "w") as f:
+        with open(path, "w") as f:  # noqa: PTH123
             f.write("".join(content))
 
     def get_atoms(self) -> abc.Iterable[Atom]:
@@ -201,7 +201,7 @@ class Molecule:
             msg = "atom_ids was of length 0."
             raise ValueError(msg)
 
-        return np.divide(
+        return np.divide(  # type: ignore[return-value]
             self.position_matrix[:, atom_ids].sum(axis=1),  # type: ignore[index]
             len(atom_ids),  # type: ignore[arg-type]
         )

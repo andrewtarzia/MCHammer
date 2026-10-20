@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import mchammer as mch
 import numpy as np
+
+import mchammer as mch
 
 
 def test_opt_get_bond_vector(
@@ -80,7 +81,7 @@ def test_opt_translate_atoms_along_vector(
     new_molecule = mch.translate_atoms_along_vector(
         mol=new_molecule, atom_ids=(3, 4, 5), vector=np.array([0, -5, 0])
     )
-    print(position_matrix, new_molecule.get_position_matrix())
+    print(position_matrix, new_molecule.get_position_matrix())  # noqa: T201
     assert np.all(
         np.equal(
             position_matrix,
@@ -104,7 +105,7 @@ def test_opt_get_result(
 ) -> None:
     original_pos_mat = molecule.get_position_matrix()
     subunits = molecule.get_subunits(bond_pair_ids=((0, 3),))
-    mol, results = optimizer.get_result(
+    _mol, results = optimizer.get_result(
         mol=molecule,
         bond_pair_ids=((0, 3),),
         subunits=subunits,
@@ -117,8 +118,8 @@ def test_opt_get_result(
         ),
     )
     # Give it some wiggle room.
-    assert final_bond_length > 1.5
-    assert final_bond_length < 2.5
+    assert final_bond_length > 1.5  # noqa: PLR2004
+    assert final_bond_length < 2.5  # noqa: PLR2004
 
     # Test all other bond lengths are equivalent.
     for bond in molecule.get_bonds():
@@ -142,14 +143,14 @@ def test_opt_get_trajectory(
 ) -> None:
     original_pos_mat = molecule.get_position_matrix()
     subunits = molecule.get_subunits(bond_pair_ids=((0, 3),))
-    mol, results = optimizer.get_trajectory(
+    _mol, results = optimizer.get_trajectory(
         mol=molecule,
         bond_pair_ids=((0, 3),),
         subunits=subunits,
     )
 
-    assert results.get_step_count() == 99
-    assert len(tuple(results.get_steps_properties())) == 100
+    assert results.get_step_count() == 99  # noqa: PLR2004
+    assert len(tuple(results.get_steps_properties())) == 100  # noqa: PLR2004
 
     final_bond_length = np.linalg.norm(
         mch.get_bond_vector(
@@ -158,8 +159,8 @@ def test_opt_get_trajectory(
         ),
     )
     # Give it some wiggle room.
-    assert final_bond_length > 1.5
-    assert final_bond_length < 2.5
+    assert final_bond_length > 1.5  # noqa: PLR2004
+    assert final_bond_length < 2.5  # noqa: PLR2004
 
     # Test all other bond lengths are equivalent.
     for bond in molecule.get_bonds():

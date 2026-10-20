@@ -17,11 +17,23 @@ Install using pip:
 
   pip install mchammer
 
+Developer Setup
+---------------
+
+To develop with ``mchammer``, you can clone the repo and use
+`just <https://github.com/casey/just>`_ and `uv <https://docs.astral.sh>`_
+to setup the dev environment:
+
+.. code-block:: bash
+
+  just setup
+
+
 Algorithm
 ---------
 
 Subunits are the rigid bodies of a molecule.
-Substructures are the bonded interactions between them. 
+Substructures are the bonded interactions between them.
 There are nonbonded interactions between subunits too.
 
 MCHammer implements a simple Metropolis Monte-Carlo algorithm to optimize the
@@ -38,33 +50,47 @@ bond length is the energy mininum and steric clashes are avoided.
 The MC algorithm is as follows:
 
 For ``step`` in *N* steps:
+
     1. Choose a bond ``B`` at random.
     2. Choose a subunit ``s`` on either side of ``B`` at random.
-    3. Define two possible translations of ``s``, ``a`` and ``b`` and choose
-    at random:
-        ``a`` is defined by a random number in [-1, 1) step along the ``s`` to
-        molecule centre of mass (com).
-        ``b`` is defined by a random number in [-1, 1) step along the vector
-        ``B``.
-        Step size is defined by user input.
-    4. Compute system potential ``U`` = ``U_b`` + ``U_nb``:
-        ``U_b`` is the bonded potential, defined by the sum of all parabolic
-        bond stretches about the target bond length for all ``B``:
-            ``U_b = sum_i (epsilon_b * (r_i - R_t)^2 )``, where ``R_t`` is the
-            target bond length, ``epsilon_b`` defines the strength of the
-            potential and ``r_i`` is the ``ith`` bond length.
-        ``U_nb`` is the nonbonded potential, defined by the repulsive part of
-        the Lennard-Jones potential:
-            ``U_nb = sum_i,j (epsilon_nb * (sigma / r_ij)^mu)``, where
-            ``epsilon_nb`` defines the strength of the potential, ``sigma``
-            defines the position where the potential becomes repulsive, ``mu``
-            defines the steepness of the potential and ``r_ij`` is the
-            pairwise distance between atoms ``i`` and ``j``.
-    5. Accept or reject move:
-        Accept if ``U_i`` < ``U_(i-1)`` or ``exp(-beta(U_i - U_(i-1))`` > ``R``
-        , where ``R`` is a random number [0, 1) and ``beta`` is the inverse
-        Boltzmann temperature.
-        Reject otherwise.
+    3. Define two possible translations of ``s``, ``a`` and ``b``, and choose
+       one at random:
+
+       * ``a`` is a step of random length in [-1, 1) along the vector from
+         ``s`` to the molecule's centre of mass (com).
+       * ``b`` is a step of random length in [-1, 1) along the vector of
+         ``B``.
+
+       The step size is defined by user input.
+    4. Compute the system potential :math:`U = U_b + U_{nb}`.
+
+       :math:`U_b` is the bonded potential, defined as the sum of parabolic
+       bond stretches about the target bond length for all ``B``:
+
+       .. math::
+
+          U_b = \sum_i \epsilon_b (r_i - R_t)^2
+
+       where :math:`R_t` is the target bond length, :math:`\epsilon_b`
+       defines the strength of the potential, and :math:`r_i` is the
+       :math:`i`-th bond length.
+
+       :math:`U_{nb}` is the nonbonded potential, defined by the repulsive
+       part of the Lennard-Jones potential:
+
+       .. math::
+
+          U_{nb} = \sum_{i,j} \epsilon_{nb} \left( \frac{\sigma}{r_{ij}} \right)^{\mu}
+
+       where :math:`\epsilon_{nb}` defines the strength of the potential,
+       :math:`\sigma` defines the position where the potential becomes
+       repulsive, :math:`\mu` defines the steepness of the potential, and
+       :math:`r_{ij}` is the pairwise distance between atoms :math:`i` and
+       :math:`j`.
+    5. Accept or reject the move. Accept if :math:`U_i < U_{i-1}` or
+       :math:`\exp(-\beta (U_i - U_{i-1})) > R`, where :math:`R` is a random
+       number in [0, 1) and :math:`\beta = 1 / (k_B T)` is the inverse
+       temperature. Reject otherwise.
 
 The workflow for a porous organic cage built using *stk*
 (https://stk.readthedocs.io/) is shown schematically below (this example is
@@ -167,12 +193,12 @@ Contributors and Acknowledgements
 ---------------------------------
 
 I developed this code as a post doc in the Jelfs research group at Imperial
-College London (<http://www.jelfs-group.org/>,
-<https://github.com/JelfsMaterialsGroup>).
+College London (http://www.jelfs-group.org/,
+https://github.com/JelfsMaterialsGroup).
 
 This code was reviewed and edited by: Lukas Turcani
-(<https://github.com/lukasturcani>), Steven Bennett
-(<https://github.com/stevenbennett96>)
+(https://github.com/lukasturcani), Steven Bennett
+(https://github.com/stevenbennett96)
 
 License
 -------

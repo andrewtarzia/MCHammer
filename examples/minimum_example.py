@@ -1,8 +1,9 @@
 import os  # noqa: INP001, D100
 
 import matplotlib.pyplot as plt
-import mchammer as mch
 import stk
+
+import mchammer as mch
 
 benzene = stk.BuildingBlock.init_from_file("benzene.mol")
 benzene_atoms = [
@@ -37,7 +38,7 @@ mch_mol, mch_result = optimizer.get_trajectory(
 benzene = benzene.with_position_matrix(mch_mol.get_position_matrix())
 benzene.write("benzene_opt.mol")
 
-with open("benzene_opt.out", "w") as f:
+with open("benzene_opt.out", "w") as f:  # noqa: PTH123
     f.write(mch_result.get_log())
 
 # Output trajectory as separate xyz files for visualisation.

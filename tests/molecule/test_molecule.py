@@ -41,7 +41,7 @@ def test_molecule_with_displacement(
     displaced_position_matrix: np.ndarray,
 ) -> None:
     test = molecule.with_displacement(displacement)
-    print(test.get_position_matrix())
+    print(test.get_position_matrix())  # noqa: T201
     assert np.all(
         np.allclose(
             displaced_position_matrix,
@@ -50,7 +50,7 @@ def test_molecule_with_displacement(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def path(tmpdir) -> None:  # noqa: ANN001
     return os.path.join(tmpdir, "molecule.xyz")  # noqa: PTH118
 
@@ -58,7 +58,7 @@ def path(tmpdir) -> None:  # noqa: ANN001
 def test_molecule_write_xyz_file(molecule: mch.Molecule, path: str) -> None:
     molecule.write_xyz_file(path)
     content = molecule.write_xyz_content()
-    with open(path) as f:
+    with open(path) as f:  # noqa: PTH123
         test_lines = f.readlines()
 
     assert "".join(test_lines) == "".join(content)
@@ -68,7 +68,7 @@ def test_molecule_get_atoms(
     molecule: mch.Molecule,
     atoms: list[mch.Atom],
 ) -> None:
-    for test, atom in zip(molecule.get_atoms(), atoms):
+    for test, atom in zip(molecule.get_atoms(), atoms, strict=True):
         assert test.get_id() == atom.get_id()
         assert test.get_element_string() == atom.get_element_string()
 
@@ -77,7 +77,7 @@ def test_molecule_get_bonds(
     molecule: mch.Molecule,
     bonds: list[mch.Bond],
 ) -> None:
-    for test, bond in zip(molecule.get_bonds(), bonds):
+    for test, bond in zip(molecule.get_bonds(), bonds, strict=True):
         assert test.get_id() == bond.get_id()
         assert test.get_atom1_id() == bond.get_atom1_id()
         assert test.get_atom2_id() == bond.get_atom2_id()
