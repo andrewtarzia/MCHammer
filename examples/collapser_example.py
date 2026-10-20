@@ -1,8 +1,9 @@
 import os  # noqa: INP001, D100
 from collections import defaultdict
 
-import mchammer as mch
 import stk
+
+import mchammer as mch
 
 
 def get_long_bond_ids(mol: mch.Molecule) -> tuple:
@@ -108,7 +109,7 @@ mch_mol, mch_result = optimizer.get_trajectory(
 cage = cage.with_position_matrix(mch_result.get_final_position_matrix())
 cage.write("coll_poc_opt.mol")
 
-with open("coll_opt.out", "w") as f:
+with open("coll_opt.out", "w") as f:  # noqa: PTH123
     f.write(mch_result.get_log())
 
 # Output trajectory as separate xyz files for visualisation.

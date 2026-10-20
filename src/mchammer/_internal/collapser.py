@@ -81,7 +81,7 @@ class Collapser:
                         atom2_id=atom2_id,
                     )
 
-    def _get_new_position_matrix(  # noqa: PLR0913
+    def _get_new_position_matrix(
         self,
         mol: Molecule,
         subunits: dict,
@@ -94,8 +94,8 @@ class Collapser:
             step_size = self._step_size
 
         new_position_matrix = mol.get_position_matrix()
-        for su in subunits:
-            for atom_id in subunits[su]:
+        for su, data in subunits.items():
+            for atom_id in data:
                 pos = mol.get_position_matrix()[atom_id]
                 new_position_matrix[atom_id] = (
                     pos - step_size * vectors[su] * scales[su]
@@ -152,11 +152,11 @@ class Collapser:
             max_distance = max(list(norms.values()))
             su_cent_scales = {i: float(norms[i] / max_distance) for i in norms}
         else:
-            su_cent_scales = {i: 1.0 for i in su_cent_vectors}
+            su_cent_scales = dict.fromkeys(su_cent_vectors, 1.0)
 
         return su_cent_vectors, su_cent_scales
 
-    def _run_step(  # noqa: PLR0913
+    def _run_step(
         self,
         mol: Molecule,
         bond_pair_ids: tuple,
